@@ -1,0 +1,48 @@
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Data files (too large for Git)
+Phase_1/data/utd-mhad/
+Phase_1/data/*.task
+*.avi
+*.mat
+*.mp4
+*.csv
+
+# Results (generated files)
+Phase_1/results/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Keep documentation and requirements
+!README.md
+!requirements.txt
