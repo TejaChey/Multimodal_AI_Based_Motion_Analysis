@@ -1,36 +1,59 @@
-# Multimodal AI-Based Motion Analysis
+# Multimodal AI-Based Motion Analysis 🏃‍♂️⌚
 
-A multimodal AI pipeline for human motion analysis using video (MediaPipe pose estimation) and IMU sensor data from the [UTD-MHAD](https://personal.utdallas.edu/~kehtar/UTD-MHAD.html) dataset.
+A comprehensive machine learning pipeline that fuses high-speed optical computer vision (MediaPipe) with wearable telemetry (Samsung Galaxy Watch IMU) to mathematically classify and grade human athletic biomechanics.
+
+This project was developed in two distinct phases, scaling from controlled academic datasets to unstructured, high-velocity real-world athletic sprinting.
 
 ---
 
-## 📁 Project Structure
+##  Project Overview
+
+### Phase 1: Academic Baseline (UTD-MHAD)
+**Objective**: Establish a baseline multimodal sensor fusion architecture.
+* Utilized the [UTD-MHAD Dataset](https://personal.utdallas.edu/~kehtar/UTD-MHAD.html) to classify "Jogging in Place" action intensities (Fast vs. Slow).
+* Fused 30fps MediaPipe skeletal joint velocities with wearable 3D acceleration thresholds.
+* Successfully proved that Late Fusion machine learning (Random Forest & SVM) could reliably classify human motion using multidimensional data streams.
+
+### Phase 2: High-Velocity Real-World Sprinting (Main Focus)
+**Objective**: Build a 3-tier athletic Autograder (Elite, Intermediate, Beginner) evaluating custom real-world 15-meter fly zone sprints.
+* **The Dataset**: Custom dual-modality data collected from 9 athletes. Captured via 60fps smartphone cameras and high-G Samsung Galaxy Watch telemetry (dynamic 50-100Hz).
+* **Clock-Drift Synchronization**: Bypassed unreliable UNIX timestamps by developing a **Savitzky-Golay Intensity Overlap Algorithm**, which structurally mapped continuous peak exertion IMU forces directly onto the video duration.
+* **Algorithmic Proxies**: Engineered 23 biomechanical features without expensive hardware. This includes calculating **Ground Contact Time (GCT)** through vertical ankle velocity, extracting **Stride Cadence (Hz)** using Welch's Power Spectral Density on the gyroscope, and grading biomechanical efficiency using **SPARC** (Spectral Arc Length) motion smoothness.
+* **The ML Engine**: Grouped athletes using Unsupervised **K-Means Clustering** to remove human bias, and validated the classifier using **Leave-One-Out Cross-Validation (LOOCV)** to ensure scientific validity on small sample sizes.
+
+---
+
+## 📂 Project Structure
 
 ```
 Multimodal-AI-Based-Motion-Analysis-/
-├── Phase_1/
-│   ├── code/                         # All processing and analysis scripts
-│   │   ├── process_all_videos.py     # Extract pose landmarks from all videos
-│   │   ├── imu_feature_extractoripynb.py  # Extract features from IMU data
-│   │   ├── merge_features.py         # Merge video + IMU features
-│   │   ├── explore_data.py           # Data exploration and statistics
-│   │   ├── prepare_ml_data.py        # Prepare ML datasets (binary)
-│   │   ├── prepare_ml_data_3class.py # Prepare ML datasets (3-class)
-│   │   ├── train_model.py            # Train classification model
-│   │   ├── compare_modalities.py     # Compare modalities (binary)
-│   │   ├── compare_modalities_3class.py    # Compare modalities (3-class)
-│   │   ├── compare_modalities_improved.py  # Improved modality comparison
-│   │   └── test_mediapipe.py         # MediaPipe setup test
+├── Phase_1/                          # Academic Baseline Pipeline
+│   ├── code/                         # UTD-MHAD feature extraction and baseline ML models
+│   ├── data/                         # UTD-MHAD dataset storage
+│   └── results/                      # Phase 1 models and confusion matrices
+│
+├── Phase_2/                          # Real-World Sprint Analysis Engine
+│   ├── code/
+│   │   ├── sync_trim_imu.py          # Savitzky-Golay clock synchronization
+│   │   ├── process_sprint_videos.py  # 60fps MediaPipe Video kinematics
+│   │   ├── process_sprint_imu.py     # High-G Wearable telemetrics & Spectral Analysis
+│   │   ├── merge_sprint_features.py  # 23-dimension Late Fusion concatenation
+│   │   ├── train_sprint_model.py     # K-Means Autograder & LOOCV Random Forest
+│   │   └── generate_extra_visuals.py # Modality comparison & ROC AUC curve generation
 │   ├── data/
-│   │   └── utd-mhad/                 # UTD-MHAD dataset (not in Git)
-│   └── results/                      # Generated outputs (not in Git)
-├── requirements.txt
+│   │   └── sprint_raw/               # Unstructured .mp4 and Galaxy Watch .csv files
+│   └── results/
+│       ├── synced_imu/               # Output sync-overlap graphs
+│       ├── video_features/           # Skeletal tracking data
+│       └── models/                   # Final models, ROC curves, and Feature Importances
+│
+├── requirements.txt                  
 └── README.md
 ```
 
 ---
 
-## ⚙️ Setup
+## 🛠️ Installation & Setup
 
 ```bash
 # Clone the repository
@@ -38,69 +61,47 @@ git clone <repo-url>
 cd Multimodal-AI-Based-Motion-Analysis-
 
 # Create and activate virtual environment
-python3 -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
+python -m venv venv
+# Windows:
+venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 ```
 
-### Dataset
-Download the [UTD-MHAD dataset](https://personal.utdallas.edu/~kehtar/UTD-MHAD.html) and place it at:
-```
-Phase_1/data/utd-mhad/
-```
-
-Also download the MediaPipe Pose Landmarker model:
-```
-Phase_1/data/pose_landmarker_heavy.task
-```
-
 ---
 
-## 🚀 Usage
+## 🏃🏽‍♀️ Running the Phase 2 Sprint Pipeline
 
-Run scripts from the project root with the virtual environment activated:
+Execute the pipeline in sequential order with the virtual environment activated:
 
 ```bash
-# 1. Extract pose features from video data
-python Phase_1/code/process_all_videos.py
+# 1. Mathematically synchronize the Watch IMU hardware to the Video
+python Phase_2\code\sync_trim_imu.py
 
-# 2. Extract IMU features
-python Phase_1/code/imu_feature_extractoripynb.py
+# 2. Track 60fps 3D Kinematics and algorithmic GCT
+python Phase_2\code\process_sprint_videos.py
 
-# 3. Merge video + IMU features
-python Phase_1/code/merge_features.py
+# 3. Extract Spectral (PSD) Stride Frequencies from Watch forces
+python Phase_2\code\process_sprint_imu.py
 
-# 4. Explore the data
-python Phase_1/code/explore_data.py
+# 4. Fuse both datasets via Late Fusion
+python Phase_2\code\merge_sprint_features.py
 
-# 5. Prepare ML datasets
-python Phase_1/code/prepare_ml_data_3class.py
+# 5. Run the K-Means Autograder and LOOCV Machine Learning engine
+python Phase_2\code\train_sprint_model.py
 
-# 6. Train model
-python Phase_1/code/train_model.py
-
-# 7. Compare modalities
-python Phase_1/code/compare_modalities_improved.py
+# 6. Generate academic presentation graphics (ROC, Comparisons)
+python Phase_2\code\generate_extra_visuals.py
 ```
 
 ---
 
-## 🧪 Phase 1: Modality Comparison
-
-Phase 1 benchmarks three modalities for action classification:
-- **Video only** – MediaPipe pose landmarks
-- **IMU only** – Raw sensor feature extraction
-- **Multimodal** – Fusion of video + IMU features
-
-Classification is performed using Random Forest and SVM classifiers across binary and 3-class setups.
+## 📊 Results & Scientific Findings
+* **Performance Benchmark**: The 3-tier Phase 2 engine achieved **66.67% test accuracy** using Leave-One-Out validation on completely unseen human bodies, proving predictive competence at visually interpreting complex kinesthetic boundaries.
+* **The Curse of Dimensionality**: The pipeline proved that the 11-feature **IMU-Only** engine mathematically outperformed the heavier 23-feature combined model due to limited sample pools ($N=9$). Our results conclude that high-fidelity acceleration data provides a fundamentally purer analytical signal for human exertion grading than optical joint tracking alone.
 
 ---
 
-## 👥 Team
-
-| Role | Member |
-|------|--------|
-| Video Processing | Teja |
-| IMU Processing | Shaik Sadiya |

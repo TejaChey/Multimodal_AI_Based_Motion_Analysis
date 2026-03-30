@@ -1,0 +1,37 @@
+
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Data files (too large for Git)
+data/utd-mhad/
+*.avi
+*.mat
+*.mp4
+*.csv
+
+# Results (generated files)
+results/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keep only code and documentation
+!README.md
+!requirements.txt
