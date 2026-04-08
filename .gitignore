@@ -20,10 +20,17 @@ build/
 # Data files (too large for Git)
 Phase_1/data/utd-mhad/
 Phase_1/data/*.task
+Phase_2/data/sprint_raw/
+Phase_3/data/
 *.avi
 *.mat
 *.mp4
 *.csv
+
+# Keras and Sklearn Model Weights
+*.keras
+*.h5
+*.joblib
 
 # Results (generated files)
 Phase_1/results/
