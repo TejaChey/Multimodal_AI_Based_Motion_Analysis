@@ -9,54 +9,87 @@ from coaching_engine import generate_coaching_feedback
 # ── 1. DASHBOARD CONFIGURATION ───────────────────────────────────────────────
 st.set_page_config(page_title="Multimodal Sprint Analytics", layout="wide")
 
-# Custom Apple-like Dark Mode CSS Injector
+# Custom Premium Dark Theme CSS
 st.markdown("""
 <style>
-    /* Global Typography and Background */
+    /* Global Typography and Beautiful Background Gradient */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
     
     .stApp {
-        background-color: #000000;
+        background: radial-gradient(ellipse at top, #11142b, #000000 80%) !important;
+        background-attachment: fixed !important;
         color: #f5f5f7;
         font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
     
-    /* Typography */
+    /* Typography with subtle metallic gradient for headers */
     h1, h2, h3, h4 {
-        color: #f5f5f7 !important;
         font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         font-weight: 600 !important;
         letter-spacing: -0.015em;
+        background: linear-gradient(180deg, #ffffff 0%, #a0a0a5 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
     
-    /* Streamlit Metric Boxes overrides to look like iOS Widgets */
+    /* Streamlit Metric Boxes overrides: Premium Glassmorphism */
     div[data-testid="metric-container"] {
-        background: #1c1c1e;
-        border-radius: 18px;
-        padding: 15px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        background: rgba(30, 30, 36, 0.4) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border-radius: 18px !important;
+        padding: 20px !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+        transition: transform 0.25s ease-out, background 0.25s ease-out;
+    }
+    
+    div[data-testid="metric-container"]:hover {
+        transform: translateY(-4px);
+        background: rgba(40, 40, 46, 0.5) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    }
+    
+    /* Fix text coloring inside metrics (so gradient doesn't override values) */
+    div[data-testid="metric-container"] label {
+        color: #a0a0a5 !important;
+    }
+    div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
     }
 
     /* Custom Coaching Note Panels */
     .coaching-tip {
-        background: #1c1c1e;
-        padding: 20px;
+        background: rgba(30, 30, 36, 0.4);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        padding: 22px;
         border-radius: 18px;
         margin-top: 15px;
-        margin-bottom: 5px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-left: 4px solid #0A84FF;
         font-size: 16px;
-        line-height: 1.5;
+        line-height: 1.6;
         color: #f5f5f7;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
     }
     
-    /* Button overrides to look like Apple Pill Buttons */
+    /* Button overrides to look like Premium Apple Control */
     div[data-testid="stButton"] > button[kind="primary"] {
-        background-color: #ffffff !important;
-        color: #000000 !important;
+        background: linear-gradient(135deg, #0A84FF, #0055B3) !important;
+        color: #ffffff !important;
         border-radius: 980px !important;
         font-weight: 500 !important;
-        border: none !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 4px 15px rgba(10, 132, 255, 0.3) !important;
+        transition: transform 0.2s ease, filter 0.2s ease;
+    }
+    
+    div[data-testid="stButton"] > button[kind="primary"]:hover {
+        transform: scale(1.02);
+        filter: brightness(1.1);
     }
 </style>
 """, unsafe_allow_html=True)
