@@ -75,6 +75,19 @@ def process_file(accel_path: Path, gyro_path: Path) -> dict:
     df_a = pd.read_csv(accel_path)
     df_g = pd.read_csv(gyro_path)
 
+    # Flatten tuple column names caused by multi-level headers (Galaxy Watch often
+    # has a units row under the column names which pandas reads as MultiIndex)
+    def _flatten_cols(df):
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = [' '.join(str(c).strip() for c in col if str(c) != 'nan').strip()
+                          for col in df.columns]
+        else:
+            df.columns = [str(c).strip() for c in df.columns]
+        return df
+
+    df_a = _flatten_cols(df_a)
+    df_g = _flatten_cols(df_g)
+
     if len(df_a) < 10 or len(df_g) < 10:
         raise ValueError("Too few IMU samples to process.")
 
