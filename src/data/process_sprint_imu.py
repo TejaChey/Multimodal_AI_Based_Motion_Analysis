@@ -65,6 +65,37 @@ def _normalise_columns(df, axis_map):
                 break
     return df.rename(columns=rename)
 
+def _smart_read_csv(path: Path) -> pd.DataFrame:
+    """
+    Robustly read Galaxy Watch CSVs.
+    Handles: MultiIndex headers, unit rows, various column name formats.
+    """
+    df = pd.read_csv(path, header=0)
+
+    # Flatten MultiIndex (two header rows in some exports)
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = [
+            ' '.join(str(c).strip() for c in col
+                     if str(c).strip() not in ('', 'nan'))
+            for col in df.columns
+        ]
+    else:
+        df.columns = [str(c).strip() for c in df.columns]
+
+    # Drop first data row if it looks like units (non-numeric text)
+    if len(df) > 0:
+        first = df.iloc[0]
+        try:
+            pd.to_numeric(first.iloc[0])  # try converting the first cell
+        except (ValueError, TypeError):
+            # First row is a units row — skip it and re-cast columns
+            df = df.iloc[1:].reset_index(drop=True)
+            for col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+
+    return df
+
+
 # ── MAIN PROCESSOR ────────────────────────────────────────────────────────────
 
 def process_file(accel_path: Path, gyro_path: Path) -> dict:
@@ -72,21 +103,11 @@ def process_file(accel_path: Path, gyro_path: Path) -> dict:
     Read separate Galaxy Watch accelerometer & gyroscope CSVs,
     merge them by index alignment, and return 11 aggregated sprint IMU features.
     """
-    df_a = pd.read_csv(accel_path)
-    df_g = pd.read_csv(gyro_path)
+    df_a = _smart_read_csv(accel_path)
+    df_g = _smart_read_csv(gyro_path)
 
-    # Flatten tuple column names caused by multi-level headers (Galaxy Watch often
-    # has a units row under the column names which pandas reads as MultiIndex)
-    def _flatten_cols(df):
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = [' '.join(str(c).strip() for c in col if str(c) != 'nan').strip()
-                          for col in df.columns]
-        else:
-            df.columns = [str(c).strip() for c in df.columns]
-        return df
-
-    df_a = _flatten_cols(df_a)
-    df_g = _flatten_cols(df_g)
+    accel_cols_found = list(df_a.columns)
+    gyro_cols_found  = list(df_g.columns)
 
     if len(df_a) < 10 or len(df_g) < 10:
         raise ValueError("Too few IMU samples to process.")
@@ -94,34 +115,55 @@ def process_file(accel_path: Path, gyro_path: Path) -> dict:
     # ── Normalise column names ────────────────────────────────────────────────
     accel_map = {
         'ax': ['ax', 'accel x', 'accelerometeraccx', 'acceleration x',
+               'linear acceleration x (m/s^2)', 'linear acceleration x',
                'x(m/s^2)', 'linaccx', 'acc_x', 'x'],
         'ay': ['ay', 'accel y', 'accelerometeraccy', 'acceleration y',
+               'linear acceleration y (m/s^2)', 'linear acceleration y',
                'y(m/s^2)', 'linaccy', 'acc_y', 'y'],
         'az': ['az', 'accel z', 'accelerometeraccz', 'acceleration z',
+               'linear acceleration z (m/s^2)', 'linear acceleration z',
                'z(m/s^2)', 'linaccz', 'acc_z', 'z'],
-        'seconds_elapsed': ['seconds_elapsed', 'time', 'timestamp',
-                            'elapsed time', 'time(s)', 'seconds', 'time_s'],
+        'seconds_elapsed': ['seconds_elapsed', 'time (s)', 'time(s)',
+                            'time', 'timestamp', 'elapsed time',
+                            'seconds', 'time_s', 'time(ns)'],
     }
     gyro_map = {
-        'gx': ['gx', 'gyro x', 'gyroscopex', 'angular velocity x', 'wx', 'gyro_x', 'x'],
-        'gy': ['gy', 'gyro y', 'gyroscopey', 'angular velocity y', 'wy', 'gyro_y', 'y'],
-        'gz': ['gz', 'gyro z', 'gyroscopez', 'angular velocity z', 'wz', 'gyro_z', 'z'],
-        'seconds_elapsed': ['seconds_elapsed', 'time', 'timestamp',
-                            'elapsed time', 'time(s)', 'seconds', 'time_s'],
+        'gx': ['gx', 'gyro x', 'gyroscopex', 'angular velocity x',
+               'angular velocity x (rad/s)', 'wx', 'gyro_x', 'x'],
+        'gy': ['gy', 'gyro y', 'gyroscopey', 'angular velocity y',
+               'angular velocity y (rad/s)', 'wy', 'gyro_y', 'y'],
+        'gz': ['gz', 'gyro z', 'gyroscopez', 'angular velocity z',
+               'angular velocity z (rad/s)', 'wz', 'gyro_z', 'z'],
+        'seconds_elapsed': ['seconds_elapsed', 'time (s)', 'time(s)',
+                            'time', 'timestamp', 'elapsed time',
+                            'seconds', 'time_s', 'time(ns)'],
     }
 
-    df_a = _normalise_columns(df_a, accel_map)
-    df_g = _normalise_columns(df_g, gyro_map)
+    try:
+        df_a = _normalise_columns(df_a, accel_map)
+        df_g = _normalise_columns(df_g, gyro_map)
+    except Exception as e:
+        raise ValueError(
+            f"Column rename failed: {e}. "
+            f"Accel columns: {accel_cols_found}. "
+            f"Gyro columns: {gyro_cols_found}."
+        )
 
-    # Validate required columns
+    # Validate required columns — show actual names on failure
     for col in ['ax', 'ay', 'az']:
         if col not in df_a.columns:
-            raise KeyError(f"Accelerometer CSV missing column '{col}'. "
-                           f"Found: {list(df_a.columns)}")
+            raise KeyError(
+                f"Accel CSV: cannot find '{col}'. "
+                f"Detected columns: {accel_cols_found}. "
+                f"Please share these column names so we can add mapping."
+            )
     for col in ['gx', 'gy', 'gz']:
         if col not in df_g.columns:
-            raise KeyError(f"Gyroscope CSV missing column '{col}'. "
-                           f"Found: {list(df_g.columns)}")
+            raise KeyError(
+                f"Gyro CSV: cannot find '{col}'. "
+                f"Detected columns: {gyro_cols_found}. "
+                f"Please share these column names so we can add mapping."
+            )
 
     # ── Merge by index alignment (trim to shorter length) ────────────────────
     min_len = min(len(df_a), len(df_g))
@@ -129,25 +171,34 @@ def process_file(accel_path: Path, gyro_path: Path) -> dict:
     df_g = df_g.iloc[:min_len].reset_index(drop=True)
 
     df = pd.DataFrame({
-        'ax': df_a['ax'].values,
-        'ay': df_a['ay'].values,
-        'az': df_a['az'].values,
-        'gx': df_g['gx'].values,
-        'gy': df_g['gy'].values,
-        'gz': df_g['gz'].values,
-    })
+        'ax': pd.to_numeric(df_a['ax'], errors='coerce'),
+        'ay': pd.to_numeric(df_a['ay'], errors='coerce'),
+        'az': pd.to_numeric(df_a['az'], errors='coerce'),
+        'gx': pd.to_numeric(df_g['gx'], errors='coerce'),
+        'gy': pd.to_numeric(df_g['gy'], errors='coerce'),
+        'gz': pd.to_numeric(df_g['gz'], errors='coerce'),
+    }).dropna().reset_index(drop=True)
+
+    if len(df) < 10:
+        raise ValueError("Too few valid numeric IMU rows after parsing.")
 
     # Reconstruct time axis
     if 'seconds_elapsed' in df_a.columns:
-        df['seconds_elapsed'] = df_a['seconds_elapsed'].values
+        t = pd.to_numeric(df_a['seconds_elapsed'], errors='coerce').dropna()
+        df['seconds_elapsed'] = t.values[:len(df)]
     elif 'seconds_elapsed' in df_g.columns:
-        df['seconds_elapsed'] = df_g['seconds_elapsed'].values
+        t = pd.to_numeric(df_g['seconds_elapsed'], errors='coerce').dropna()
+        df['seconds_elapsed'] = t.values[:len(df)]
     else:
-        df['seconds_elapsed'] = np.arange(min_len) / 38.0  # default 38 Hz
+        df['seconds_elapsed'] = np.arange(len(df)) / 38.0
+
+    # Handle nanosecond timestamps (convert to seconds)
+    if df['seconds_elapsed'].max() > 1e9:
+        df['seconds_elapsed'] = df['seconds_elapsed'] / 1e9
 
     # ── Feature extraction ────────────────────────────────────────────────────
-    duration = df['seconds_elapsed'].iloc[-1] - df['seconds_elapsed'].iloc[0]
-    fs = (min_len - 1) / duration if duration > 0 else 38.0
+    duration = float(df['seconds_elapsed'].iloc[-1]) - float(df['seconds_elapsed'].iloc[0])
+    fs = (len(df) - 1) / duration if duration > 0 else 38.0
 
     accel_mag = get_magnitude(df['ax'], df['ay'], df['az'])
     gyro_mag  = get_magnitude(df['gx'], df['gy'], df['gz'])
@@ -155,7 +206,7 @@ def process_file(accel_path: Path, gyro_path: Path) -> dict:
     a_freq = get_dominant_frequency(accel_mag, fs)
     g_freq = get_dominant_frequency(gyro_mag, fs)
 
-    features = {
+    return {
         'athlete':                    accel_path.stem,
         'peak_accel_mag':             round(float(accel_mag.max()), 3),
         'mean_accel_mag':             round(float(accel_mag.mean()), 3),
@@ -169,8 +220,6 @@ def process_file(accel_path: Path, gyro_path: Path) -> dict:
         'movement_smoothness_gyro':   round(get_sparc_smoothness(gyro_mag, fs), 3),
         'steps_per_min_gyro':         round(g_freq * 60, 1),
     }
-
-    return features
 
 
 def main():
