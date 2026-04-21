@@ -52,7 +52,9 @@ def run_inference(video_path: Path, accel_path: Path, gyro_path: Path):
     try:
         imu_metrics = process_imu(accel_path, gyro_path)
     except Exception as e:
-        return None, None, f"IMU Processing Error: {e}"
+        import traceback
+        tb = traceback.format_exc()
+        return None, None, f"IMU Processing Error: {e}\n\nTraceback:\n{tb}"
         
     # Remove metadata keys we don't need for the neural network
     if 'athlete' in imu_metrics: del imu_metrics['athlete']
