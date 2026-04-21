@@ -35,10 +35,11 @@ FEATURE_ORDER = [
     "stride_rate_gyro_hz", "movement_smoothness_gyro", "steps_per_min_gyro"
 ]
 
-def run_inference(video_path: Path, imu_path: Path):
+def run_inference(video_path: Path, accel_path: Path, gyro_path: Path):
     """
     End-to-End Multimodal Inference Pipeline.
-    Takes raw video and raw IMU, extracts 23 features, scales them, and predicts Skill Level.
+    Takes raw video + separate Galaxy Watch accelerometer & gyroscope CSVs,
+    extracts 23 features, scales them, and predicts Skill Level.
     """
     # ── 1. Video Processing ──
     df_video, fps = process_video(video_path)
@@ -47,9 +48,9 @@ def run_inference(video_path: Path, imu_path: Path):
     
     video_metrics = get_sprint_metrics(df_video, fps)
     
-    # ── 2. IMU Processing ──
+    # ── 2. IMU Processing (merge accel + gyro) ──
     try:
-        imu_metrics = process_imu(imu_path)
+        imu_metrics = process_imu(accel_path, gyro_path)
     except Exception as e:
         return None, None, f"IMU Processing Error: {e}"
         

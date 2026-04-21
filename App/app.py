@@ -64,10 +64,12 @@ with col1:
 
 with col2:
     st.markdown("### ⌚ Secondary Modality (Sensors)")
-    imu_file = st.file_uploader("Upload Synced Watch Data (.csv)", type=["csv"])
+    st.caption("Galaxy Watch exports 2 files — upload both below:")
+    accel_file = st.file_uploader("📈 Accelerometer CSV", type=["csv"], key="accel")
+    gyro_file  = st.file_uploader("🔄 Gyroscope CSV", type=["csv"], key="gyro")
 
 # ── 3. EXECUTION LOGIC ───────────────────────────────────────────────────────
-if video_file and imu_file:
+if video_file and accel_file and gyro_file:
     st.markdown("<br>", unsafe_allow_html=True)
     
     # Giant Execution Button
@@ -81,13 +83,17 @@ if video_file and imu_file:
                 tv.write(video_file.read())
                 temp_video_path = Path(tv.name)
                 
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as ti:
-                ti.write(imu_file.read())
-                temp_imu_path = Path(ti.name)
+            with tempfile.NamedTemporaryFile(delete=False, suffix="_accel.csv") as ta:
+                ta.write(accel_file.read())
+                temp_accel_path = Path(ta.name)
+
+            with tempfile.NamedTemporaryFile(delete=False, suffix="_gyro.csv") as tg:
+                tg.write(gyro_file.read())
+                temp_gyro_path = Path(tg.name)
             
             st.write("2️⃣  Extracting MediaPipe Pose Landmarks & IMU Features...")
             # Run the actual deep learning bridged python script
-            label, metrics, error = run_inference(temp_video_path, temp_imu_path)
+            label, metrics, error = run_inference(temp_video_path, temp_accel_path, temp_gyro_path)
             
             if error:
                 status.update(label="Critical System Error", state="error", expanded=True)
@@ -128,4 +134,5 @@ if video_file and imu_file:
                 
                 # Cleanup
                 temp_video_path.unlink(missing_ok=True)
-                temp_imu_path.unlink(missing_ok=True)
+                temp_accel_path.unlink(missing_ok=True)
+                temp_gyro_path.unlink(missing_ok=True)
