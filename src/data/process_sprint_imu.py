@@ -72,7 +72,42 @@ def process_file(csv_path: Path) -> dict:
     
     if len(df) < 10:
         raise ValueError("Too few samples to process.")
-        
+
+    # ── Auto-detect & normalise column names ──────────────────────────────────
+    # Handles: Watch Sensor Logger, Samsung Health, manual exports etc.
+    col_map = {}
+    cols_lower = {c.lower().strip(): c for c in df.columns}
+
+    candidates = {
+        'ax': ['ax', 'accel x', 'accelerometeraccx', 'acceleration x', 'x(m/s^2)', 'linaccx', 'acc_x', 'x'],
+        'ay': ['ay', 'accel y', 'accelerometeraccy', 'acceleration y', 'y(m/s^2)', 'linaccy', 'acc_y', 'y'],
+        'az': ['az', 'accel z', 'accelerometeraccz', 'acceleration z', 'z(m/s^2)', 'linaccz', 'acc_z', 'z'],
+        'gx': ['gx', 'gyro x', 'gyroscopex', 'angular velocity x', 'wx', 'gyro_x'],
+        'gy': ['gy', 'gyro y', 'gyroscopey', 'angular velocity y', 'wy', 'gyro_y'],
+        'gz': ['gz', 'gyro z', 'gyroscopez', 'angular velocity z', 'wz', 'gyro_z'],
+        'seconds_elapsed': ['seconds_elapsed', 'time', 'timestamp', 'elapsed time', 'time(s)', 'seconds', 'time_s'],
+    }
+
+    for standard_name, aliases in candidates.items():
+        for alias in aliases:
+            if alias in cols_lower:
+                col_map[standard_name] = cols_lower[alias]
+                break
+
+    # Apply remapping
+    df = df.rename(columns={v: k for k, v in col_map.items()})
+
+    # Validate all required columns exist
+    required = ['ax', 'ay', 'az', 'gx', 'gy', 'gz']
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise KeyError(f"Could not find IMU columns: {missing}. Available: {list(df.columns)}")
+
+    # Handle time column — if missing, generate synthetic
+    if 'seconds_elapsed' not in df.columns:
+        df['seconds_elapsed'] = np.arange(len(df)) / 38.0  # Default 38Hz
+    # ──────────────────────────────────────────────────────────────────────────
+
     # Dynamically calculate exact sample rate since Galaxy Watch fluctuates
     duration = df['seconds_elapsed'].iloc[-1] - df['seconds_elapsed'].iloc[0]
     if duration <= 0:
@@ -83,6 +118,7 @@ def process_file(csv_path: Path) -> dict:
     # 1. Magnitudes
     accel_mag = get_magnitude(df['ax'], df['ay'], df['az'])
     gyro_mag  = get_magnitude(df['gx'], df['gy'], df['gz'])
+
     
     # 2. Frequencies (Stride Rate)
     a_freq = get_dominant_frequency(accel_mag, fs)
