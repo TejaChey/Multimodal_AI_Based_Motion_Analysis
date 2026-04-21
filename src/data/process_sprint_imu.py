@@ -29,6 +29,10 @@ def get_dominant_frequency(signal, fs):
     """Finds peak frequency using Welch's power spectral density"""
     if len(signal) < 10:
         return 0.0
+    
+    if hasattr(signal, 'to_numpy'):
+        signal = signal.to_numpy()
+        
     nperseg = min(256, len(signal))
     freqs, psd = welch(signal, fs=fs, nperseg=nperseg)
     mask = (freqs >= 1.0) & (freqs <= 5.0)
@@ -45,6 +49,10 @@ def get_sparc_smoothness(signal, fs):
     """
     if len(signal) < 10:
         return 0.0
+        
+    if hasattr(signal, 'to_numpy'):
+        signal = signal.to_numpy()
+        
     nperseg = min(256, len(signal))
     freqs, psd = welch(signal, fs=fs, nperseg=nperseg)
     psd_norm = psd / (psd.max() + 1e-10)
