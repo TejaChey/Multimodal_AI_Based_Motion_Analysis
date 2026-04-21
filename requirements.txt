@@ -9,7 +9,7 @@ joblib>=1.2.0
 
 # Computer vision & pose estimation
 mediapipe>=0.10.0
-opencv-python>=4.7.0
+opencv-python-headless>=4.7.0
 pillow>=9.0.0
 
 # Data visualization
