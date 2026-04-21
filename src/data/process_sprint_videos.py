@@ -14,11 +14,13 @@ import mediapipe as mp
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
 from scipy.signal import find_peaks
 import warnings
 warnings.filterwarnings('ignore')
+
+# Classic CPU-based MediaPipe Pose (compatible with headless cloud servers)
+_mp_pose = mp.solutions.pose
+
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 _HERE = Path(__file__).resolve().parent
@@ -60,40 +62,34 @@ def detect_strides(ankle_y_coords, fps):
 # ── MAIN PROCESSOR ────────────────────────────────────────────────────────────
 
 def process_video(video_path: Path) -> pd.DataFrame:
-    """Extracts frame-by-frame landmarks into a DataFrame."""
-    base_options = python.BaseOptions(model_asset_path=str(MODEL_PATH))
-    options = vision.PoseLandmarkerOptions(
-        base_options=base_options,
-        output_segmentation_masks=False,
-        running_mode=vision.RunningMode.VIDEO
-    )
-
+    """Extracts frame-by-frame landmarks into a DataFrame using CPU-compatible MediaPipe."""
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
         print(f"   Cannot open {video_path.name}")
         return pd.DataFrame(), 0.0
 
-    fps = cap.get(cv2.CAP_PROP_FPS) or 60.0 # Default to 60 if reading fails
-    
+    fps = cap.get(cv2.CAP_PROP_FPS) or 60.0
     frames_data = []
     frame_idx = 0
 
-    with vision.PoseLandmarker.create_from_options(options) as landmarker:
+    with _mp_pose.Pose(
+        static_image_mode=False,
+        model_complexity=1,
+        min_detection_confidence=0.5,
+        min_tracking_confidence=0.5
+    ) as pose:
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
 
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+            result = pose.process(rgb)
             ts_ms = int((frame_idx / fps) * 1000)
 
-            result = landmarker.detect_for_video(mp_image, ts_ms)
-
             if result.pose_landmarks:
-                lm = result.pose_landmarks[0] # First person
-                
-                # Standard normalized coords (0.0 to 1.0)
+                lm = result.pose_landmarks.landmark
+
                 l_shoulder = np.array([lm[11].x, lm[11].y])
                 r_shoulder = np.array([lm[12].x, lm[12].y])
                 l_hip      = np.array([lm[23].x, lm[23].y])
@@ -107,18 +103,19 @@ def process_video(video_path: Path) -> pd.DataFrame:
                     'time_ms': ts_ms,
                     'l_knee_angle': calculate_angle(l_hip, l_knee, l_ankle),
                     'r_knee_angle': calculate_angle(r_hip, r_knee, r_ankle),
-                    'l_hip_angle': calculate_angle(l_shoulder, l_hip, l_knee),
-                    'r_hip_angle': calculate_angle(r_shoulder, r_hip, r_knee),
-                    'hip_y': (l_hip[1] + r_hip[1]) / 2.0,            # Mean hip vertical pos
-                    'athlete_height_px': abs(l_shoulder[1] - l_ankle[1]), # Approx height scaler
-                    'l_ankle_y': l_ankle[1],
-                    'r_ankle_y': r_ankle[1]
+                    'l_hip_angle':  calculate_angle(l_shoulder, l_hip, l_knee),
+                    'r_hip_angle':  calculate_angle(r_shoulder, r_hip, r_knee),
+                    'hip_y':        (l_hip[1] + r_hip[1]) / 2.0,
+                    'athlete_height_px': abs(l_shoulder[1] - l_ankle[1]),
+                    'l_ankle_y':    l_ankle[1],
+                    'r_ankle_y':    r_ankle[1]
                 })
 
             frame_idx += 1
 
     cap.release()
     return pd.DataFrame(frames_data), fps
+
 
 
 def get_sprint_metrics(df: pd.DataFrame, fps: float) -> dict:
