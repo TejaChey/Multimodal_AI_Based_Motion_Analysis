@@ -18,11 +18,16 @@ MODEL_PATH = PROJECT_ROOT / "Phase_3" / "results" / "model" / "best_sprint_model
 SCALER_PATH = PROJECT_ROOT / "Phase_3" / "results" / "model" / "fitted_scaler.joblib"
 
 # Load globally to avoid latency on every request
+_model = None
+_scaler = None
+LOAD_ERROR = ""
 try:
     _model = tf.keras.models.load_model(str(MODEL_PATH))
     _scaler = joblib.load(str(SCALER_PATH))
 except Exception as e:
-    print(f"Warning: Model deployment files missing. {e}")
+    import traceback
+    LOAD_ERROR = f"Failed to load AI Models! Reason: {e}\n\nTraceback:\n{traceback.format_exc()}"
+
 
 # Strict mathematical order dictated by Phase 3 training input shape
 FEATURE_ORDER = [
@@ -41,6 +46,9 @@ def run_inference(video_path: Path, accel_path: Path, gyro_path: Path):
     Takes raw video + separate Galaxy Watch accelerometer & gyroscope CSVs,
     extracts 23 features, scales them, and predicts Skill Level.
     """
+    if LOAD_ERROR:
+        return None, None, LOAD_ERROR
+        
     # ── 1. Video Processing ──
     df_video, fps = process_video(video_path)
     if len(df_video) == 0:
