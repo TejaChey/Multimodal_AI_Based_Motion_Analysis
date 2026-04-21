@@ -50,6 +50,10 @@ desktop.ini
 # Logs
 *.log
 
+# MLflow local artifacts (not needed on GitHub)
+mlflow.db
+mlruns/
+
 # Keep documentation and requirements
 !README.md
 !requirements.txt

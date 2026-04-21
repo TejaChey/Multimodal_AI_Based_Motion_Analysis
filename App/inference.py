@@ -10,8 +10,8 @@ _HERE = Path(__file__).resolve().parent
 PROJECT_ROOT = _HERE.parent
 sys.path.append(str(PROJECT_ROOT)) 
 
-from Phase_2.code.process_sprint_videos import process_video, get_sprint_metrics
-from Phase_2.code.process_sprint_imu import process_file as process_imu
+from src.data.process_sprint_videos import process_video, get_sprint_metrics
+from src.data.process_sprint_imu import process_file as process_imu
 
 # ── MODEL DEPLOYMENT ARTIFACTS ───────────────────────────────────────────────
 MODEL_PATH = PROJECT_ROOT / "Phase_3" / "results" / "model" / "best_sprint_model.keras"

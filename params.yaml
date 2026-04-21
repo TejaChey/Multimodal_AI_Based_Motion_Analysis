@@ -1,0 +1,26 @@
+# Hyperparameter Configuration
+# All model and pipeline parameters are stored here to avoid hardcoding in Python scripts
+
+data:
+  input_csv_path: "Phase_3/data/augmented_features.csv"
+  random_state: 42
+  exclude_cols: ["label", "skill_level", "aug_method", "athlete", "trial"]
+
+model:
+  architecture: "Multi-Layer Perceptron (MLP)"
+  input_dim: 23
+  output_dim: 3
+  
+training:
+  batch_size: 32
+  epochs: 200
+  learning_rate: 0.001
+  l2_regularization: 0.001
+  dropout_rates:
+    layer_1: 0.4
+    layer_2: 0.3
+    layer_3: 0.2
+
+mlflow:
+  experiment_name: "Sprint-Biomechanics-DL"
+  tracking_uri: "sqlite:///mlflow.db"
