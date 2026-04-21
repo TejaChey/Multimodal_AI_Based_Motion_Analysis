@@ -54,6 +54,10 @@ def run_inference(video_path: Path, accel_path: Path, gyro_path: Path):
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
+        print("\n" + "="*50)
+        print("❗ IMU PROCESSING CRASH TRACEBACK:")
+        print(tb)
+        print("="*50 + "\n")
         return None, None, f"IMU Processing Error: {e}\n\nTraceback:\n{tb}"
         
     # Remove metadata keys we don't need for the neural network
