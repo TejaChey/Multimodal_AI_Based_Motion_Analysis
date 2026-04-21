@@ -102,37 +102,38 @@ if video_file and accel_file and gyro_file:
                 st.write("3️⃣  Feeding Kinematics to Deep Learning Classifier...")
                 status.update(label="Analysis Pipeline Complete!", state="complete", expanded=False)
                 
-                # ── 4. RESULTS DASHBOARD ─────────────────────────────────────
-                st.markdown("---")
-                
-                # Skill Badge Banner
-                st.markdown(f"## 🏅 Predicted Athlete Skill Class: <span style='color:white; background:#45a29e; padding:5px 15px; border-radius:5px;'>{label.upper()}</span>", unsafe_allow_html=True)
-                st.markdown("<br>", unsafe_allow_html=True)
+            # Cleanup
+            temp_video_path.unlink(missing_ok=True)
+            temp_accel_path.unlink(missing_ok=True)
+            temp_gyro_path.unlink(missing_ok=True)
 
-                dash_col1, dash_col2 = st.columns([1, 2])
-                
-                # Left Column: Raw Metrics
-                with dash_col1:
-                    st.markdown("### 📊 Extracted Features")
-                    st.metric("Stride Freq (Hz)", f"{metrics.get('stride_freq_hz', 0)}")
-                    st.metric("Peak Accel (m/s²)", f"{metrics.get('peak_accel_mag', 0)}")
-                    st.metric("Flight Ratio (%)", f"{metrics.get('flight_ratio', 0)*100:.1f}")
-                    st.metric("Knee Angle Mean (°)", f"{metrics.get('knee_angle_mean', 0)}")
-                    st.metric("Accel Smoothness", f"{metrics.get('movement_smoothness_accel', 0)}")
+        # ── 4. RESULTS DASHBOARD (Rendered outside the collapsed status box) ──
+        if not error and label and metrics:
+            st.markdown("---")
+            
+            # Skill Badge Banner
+            st.markdown(f"## 🏅 Predicted Athlete Skill Class: <span style='color:white; background:#45a29e; padding:5px 15px; border-radius:5px;'>{label.upper()}</span>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
 
-                # Right Column: The Coaching Engine Feed
-                with dash_col2:
-                    st.markdown("### 📋 Expert Coaching Engine Notes")
-                    st.write("*Analyzing structural deviations against Elite mathematical profiles...*")
+            dash_col1, dash_col2 = st.columns([1, 2])
+            
+            # Left Column: Raw Metrics
+            with dash_col1:
+                st.markdown("### 📊 Extracted Features")
+                st.metric("Stride Freq (Hz)", f"{metrics.get('stride_freq_hz', 0)}")
+                st.metric("Peak Accel (m/s²)", f"{metrics.get('peak_accel_mag', 0)}")
+                st.metric("Flight Ratio (%)", f"{metrics.get('flight_ratio', 0)*100:.1f}")
+                st.metric("Knee Angle Mean (°)", f"{metrics.get('knee_angle_mean', 0)}")
+                st.metric("Accel Smoothness", f"{metrics.get('movement_smoothness_accel', 0)}")
+
+            # Right Column: The Coaching Engine Feed
+            with dash_col2:
+                st.markdown("### 📋 Expert Coaching Engine Notes")
+                st.write("*Analyzing structural deviations against Elite mathematical profiles...*")
+                
+                tips = generate_coaching_feedback(metrics)
+                for tip in tips:
+                    st.markdown(f"<div class='coaching-tip'>{tip}</div>", unsafe_allow_html=True)
                     
-                    tips = generate_coaching_feedback(metrics)
-                    for tip in tips:
-                        st.markdown(f"<div class='coaching-tip'>{tip}</div>", unsafe_allow_html=True)
-                        
-                    if label == "Elite":
-                        st.balloons()
-                
-                # Cleanup
-                temp_video_path.unlink(missing_ok=True)
-                temp_accel_path.unlink(missing_ok=True)
-                temp_gyro_path.unlink(missing_ok=True)
+                if label == "Elite":
+                    st.balloons()
