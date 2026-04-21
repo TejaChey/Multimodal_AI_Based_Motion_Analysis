@@ -31,7 +31,7 @@ PyYAML>=6.0
 tqdm>=4.64.0
 
 # Deep Learning (Phase 3)
-tensorflow>=2.10.0
+tensorflow==2.15.1
 imbalanced-learn>=0.10.0
 
 # Web Deployment (Phase 4)
