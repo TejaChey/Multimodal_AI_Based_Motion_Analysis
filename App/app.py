@@ -9,87 +9,89 @@ from coaching_engine import generate_coaching_feedback
 # ── 1. DASHBOARD CONFIGURATION ───────────────────────────────────────────────
 st.set_page_config(page_title="Multimodal Sprint Analytics", layout="wide")
 
-# Custom Premium Dark Theme CSS
+# Custom Black & White Theme CSS
 st.markdown("""
 <style>
-    /* Global Typography and Beautiful Background Gradient */
+    /* Global Typography and White Background */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
     
     .stApp {
-        background: radial-gradient(ellipse at top, #11142b, #000000 80%) !important;
-        background-attachment: fixed !important;
-        color: #f5f5f7;
+        background: #ffffff !important; /* Pure white background */
+        color: #000000 !important; /* Solid black text */
         font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
     
-    /* Typography with subtle metallic gradient for headers */
-    h1, h2, h3, h4 {
+    /* Typography Overrides */
+    h1, h2, h3, h4, p, span {
+        color: #000000 !important;
         font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        font-weight: 600 !important;
+    }
+
+    h1, h2, h3, h4 {
+        font-weight: 700 !important;
         letter-spacing: -0.015em;
-        background: linear-gradient(180deg, #ffffff 0%, #a0a0a5 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
     }
     
-    /* Streamlit Metric Boxes overrides: Premium Glassmorphism */
+    /* Streamlit Metric Boxes overrides: Crisp B&W styling */
     div[data-testid="metric-container"] {
-        background: rgba(30, 30, 36, 0.4) !important;
-        backdrop-filter: blur(12px) !important;
-        -webkit-backdrop-filter: blur(12px) !important;
-        border-radius: 18px !important;
+        background: #ffffff !important;
+        border-radius: 8px !important;
         padding: 20px !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
-        transition: transform 0.25s ease-out, background 0.25s ease-out;
+        border: 2px solid #000000 !important;
+        box-shadow: 4px 4px 0px #000000 !important; /* Hard black shadow for contrast */
+        transition: transform 0.2s ease-out;
     }
     
     div[data-testid="metric-container"]:hover {
-        transform: translateY(-4px);
-        background: rgba(40, 40, 46, 0.5) !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        transform: translateY(-3px);
     }
     
-    /* Fix text coloring inside metrics (so gradient doesn't override values) */
+    /* Text coloring inside metrics */
     div[data-testid="metric-container"] label {
-        color: #a0a0a5 !important;
+        color: #444444 !important; /* Slightly lighter gray for subheaders */
+        font-weight: 600 !important;
     }
     div[data-testid="metric-container"] div[data-testid="stMetricValue"] {
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
+        color: #000000 !important;
     }
 
     /* Custom Coaching Note Panels */
     .coaching-tip {
-        background: rgba(30, 30, 36, 0.4);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        background: #ffffff;
         padding: 22px;
-        border-radius: 18px;
+        border-radius: 8px;
         margin-top: 15px;
         margin-bottom: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-left: 4px solid #0A84FF;
+        border: 1px solid #000000;
+        border-left: 6px solid #000000; /* Bold black accent line */
         font-size: 16px;
         line-height: 1.6;
-        color: #f5f5f7;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        color: #000000;
     }
     
-    /* Button overrides to look like Premium Apple Control */
+    /* Button overrides: Black block with white text */
     div[data-testid="stButton"] > button[kind="primary"] {
-        background: linear-gradient(135deg, #0A84FF, #0055B3) !important;
+        background: #000000 !important;
         color: #ffffff !important;
-        border-radius: 980px !important;
-        font-weight: 500 !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        box-shadow: 0 4px 15px rgba(10, 132, 255, 0.3) !important;
-        transition: transform 0.2s ease, filter 0.2s ease;
+        border-radius: 6px !important;
+        font-weight: 600 !important;
+        border: 2px solid #000000 !important;
+        transition: all 0.2s ease;
+    }
+    
+    div[data-testid="stButton"] > button[kind="primary"] * {
+        color: #ffffff !important; /* Force internal text to white */
     }
     
     div[data-testid="stButton"] > button[kind="primary"]:hover {
-        transform: scale(1.02);
-        filter: brightness(1.1);
+        background: #ffffff !important;
+        color: #000000 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    div[data-testid="stButton"] > button[kind="primary"]:hover * {
+        color: #000000 !important; /* Force internal text to black on hover */
     }
 </style>
 """, unsafe_allow_html=True)
@@ -155,8 +157,8 @@ if video_file and accel_file and gyro_file:
         if not error and label and metrics:
             st.markdown("---")
             
-            # Skill Badge Banner
-            st.markdown(f"## Predicted Athlete Skill Class: <span style='color:#000000; background:#ffffff; padding:5px 15px; border-radius:12px;'>{label.upper()}</span>", unsafe_allow_html=True)
+            # Skill Badge Banner (Inverted to black background with white text for the new theme)
+            st.markdown(f"## Predicted Athlete Skill Class: <span style='color:#ffffff; background:#000000; padding:5px 15px; border-radius:8px;'>{label.upper()}</span>", unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
 
             dash_col1, dash_col2 = st.columns([1, 2])
