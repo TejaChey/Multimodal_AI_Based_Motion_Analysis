@@ -69,6 +69,15 @@ st.markdown("""
         color: #000000;
     }
     
+    /* Dedicated Class for the Skill Badge to override global text color */
+    .skill-badge {
+        color: #ffffff !important;
+        background-color: #000000 !important;
+        padding: 5px 15px;
+        border-radius: 8px;
+        display: inline-block;
+    }
+    
     /* Button overrides: Black block with white text */
     div[data-testid="stButton"] > button[kind="primary"] {
         background: #000000 !important;
@@ -157,8 +166,8 @@ if video_file and accel_file and gyro_file:
         if not error and label and metrics:
             st.markdown("---")
             
-            # Skill Badge Banner (Inverted to black background with white text for the new theme)
-            st.markdown(f"## Predicted Athlete Skill Class: <span style='color:#ffffff; background:#000000; padding:5px 15px; border-radius:8px;'>{label.upper()}</span>", unsafe_allow_html=True)
+            # Skill Badge Banner using the new .skill-badge CSS class
+            st.markdown(f"## Predicted Athlete Skill Class: <span class='skill-badge'>{label.upper()}</span>", unsafe_allow_html=True)
             st.markdown("<br>", unsafe_allow_html=True)
 
             dash_col1, dash_col2 = st.columns([1, 2])
