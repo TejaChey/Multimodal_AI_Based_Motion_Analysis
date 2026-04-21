@@ -11,6 +11,7 @@ Run: python Phase_2/code/process_sprint_videos.py
 
 import cv2
 import mediapipe as mp
+from mediapipe.python.solutions import pose as _mp_pose
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -18,8 +19,6 @@ from scipy.signal import find_peaks
 import warnings
 warnings.filterwarnings('ignore')
 
-# Classic CPU-based MediaPipe Pose (compatible with headless cloud servers)
-_mp_pose = mp.solutions.pose
 
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
