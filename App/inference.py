@@ -1,97 +1,33 @@
+"""Thin client of the sprintml API (the model, pose extraction and monitoring live in the service)."""
 import os
-import sys
-import joblib
-import numpy as np
-import tensorflow as tf
 from pathlib import Path
 
-# Provide resolving path to Phase 2 processing scripts
-_HERE = Path(__file__).resolve().parent
-PROJECT_ROOT = _HERE.parent
-sys.path.append(str(PROJECT_ROOT)) 
+import requests
 
-from src.data.process_sprint_videos import process_video, get_sprint_metrics
-from src.data.process_sprint_imu import process_file as process_imu
+API = os.environ.get("SPRINTML_API_URL", "http://localhost:8000")
 
-# ── MODEL DEPLOYMENT ARTIFACTS ───────────────────────────────────────────────
-MODEL_PATH = PROJECT_ROOT / "Phase_3" / "results" / "model" / "best_sprint_model.keras"
-SCALER_PATH = PROJECT_ROOT / "Phase_3" / "results" / "model" / "fitted_scaler.joblib"
-
-# Load globally to avoid latency on every request
-_model = None
-_scaler = None
-LOAD_ERROR = ""
-try:
-    _model = tf.keras.models.load_model(str(MODEL_PATH))
-    _scaler = joblib.load(str(SCALER_PATH))
-except Exception as e:
-    import traceback
-    LOAD_ERROR = f"Failed to load AI Models! Reason: {e}\n\nTraceback:\n{traceback.format_exc()}"
-
-
-# Strict mathematical order dictated by Phase 3 training input shape
-FEATURE_ORDER = [
-    "duration_s", "total_frames", "knee_angle_mean", "hip_angle_mean",
-    "knee_asymmetry", "hip_asymmetry", "vert_oscillation_norm",
-    "total_steps_detected", "stride_freq_hz", "stride_len_m",
-    "gct_ratio", "flight_ratio", "peak_accel_mag", "mean_accel_mag",
-    "std_accel_mag", "stride_rate_accel_hz", "movement_smoothness_accel",
-    "peak_gyro_mag", "mean_gyro_mag", "std_gyro_mag",
-    "stride_rate_gyro_hz", "movement_smoothness_gyro", "steps_per_min_gyro"
-]
 
 def run_inference(video_path: Path, accel_path: Path, gyro_path: Path):
-    """
-    End-to-End Multimodal Inference Pipeline.
-    Takes raw video + separate Galaxy Watch accelerometer & gyroscope CSVs,
-    extracts 23 features, scales them, and predicts Skill Level.
-    """
-    if LOAD_ERROR:
-        return None, None, LOAD_ERROR
-        
-    # ── 1. Video Processing ──
-    df_video, fps = process_video(video_path)
-    if len(df_video) == 0:
-        return None, None, "Video Error: Failed to extract human pose landmarks."
-    
-    video_metrics = get_sprint_metrics(df_video, fps)
-    
-    # ── 2. IMU Processing (merge accel + gyro) ──
+    """Returns (velocity_tier, metrics, error). metrics also carries the model's (provisional) tier."""
     try:
-        imu_metrics = process_imu(accel_path, gyro_path)
+        with open(video_path, "rb") as v, open(accel_path, "rb") as a, open(gyro_path, "rb") as g:
+            r = requests.post(f"{API}/predict", files={"video": v, "accel": a, "gyro": g}, timeout=300)
     except Exception as e:
-        import traceback
-        tb = traceback.format_exc()
-        print("\n" + "="*50)
-        print("❗ IMU PROCESSING CRASH TRACEBACK:")
-        print(tb)
-        print("="*50 + "\n")
-        return None, None, f"IMU Processing Error: {e}\n\nTraceback:\n{tb}"
-        
-    # Remove metadata keys we don't need for the neural network
-    if 'athlete' in imu_metrics: del imu_metrics['athlete']
-    if 'athlete' in video_metrics: del video_metrics['athlete']
-    
-    # Merge dicts
-    combined = {**video_metrics, **imu_metrics}
-    
-    # ── 3. Normalization & Prediction ──
-    vector = []
-    for feature in FEATURE_ORDER:
-        vector.append(float(combined.get(feature, 0.0)))
-        
-    X = np.array(vector).reshape(1, -1)
-    
+        return None, None, f"Could not reach the analysis service at {API}: {e}"
+    if r.status_code == 422:
+        body = r.json()
+        why = body.get("detail") or body
+        return None, None, f"This recording was rejected by the data-quality gate: {why}"
+    if r.status_code != 200:
+        return None, None, f"Service error {r.status_code}: {r.text[:300]}"
+    d = r.json()
+    metrics = {**d["features"], "measured_velocity_mps": d["measured_velocity_mps"], "model_tier": d["prediction"],
+               "model_status": d["model_status"], "timings_ms": d["timings_ms"]}
+    return d["velocity_tier"], metrics, ""
+
+
+def fetch_reference():
     try:
-        X_scaled = _scaler.transform(X)
-        preds = _model.predict(X_scaled, verbose=0)[0]
-    except Exception as e:
-        return None, None, f"Inference Math Error: Cannot evaluate features. {e}"
-        
-    class_idx = np.argmax(preds)
-    confidence = float(preds[class_idx])
-    
-    classes = {0: "Beginner", 1: "Intermediate", 2: "Elite"}
-    result_label = classes[class_idx]
-    
-    return result_label, combined, ""
+        return requests.get(f"{API}/reference", timeout=10).json()
+    except Exception:
+        return None

@@ -1,0 +1,5 @@
+-r requirements-serve.txt
+pytest==9.0.3
+httpx==0.28.1
+mlflow==3.5.1
+sqlalchemy>=2.0.30,<2.1

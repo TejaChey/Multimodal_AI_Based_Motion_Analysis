@@ -1,0 +1,50 @@
+# Reproducible pipeline: `dvc repro`
+stages:
+  pose:
+    cmd: python -m sprintml.cli pose
+    deps:
+      - Phase_2/data/sprint_raw
+      - src/sprintml/pose.py
+    params:
+      - pose
+    outs:
+      - artifacts/pose
+  features:
+    cmd: python -m sprintml.cli features
+    deps:
+      - artifacts/pose
+      - Phase_2/data/sprint_raw
+      - src/sprintml/features.py
+      - src/sprintml/labels.py
+      - src/sprintml/imu.py
+    params:
+      - features
+      - labels
+      - subjects
+    outs:
+      - artifacts/features_raw.csv
+  validate:
+    cmd: python -m sprintml.cli validate
+    deps:
+      - artifacts/features_raw.csv
+      - src/sprintml/quality.py
+    params:
+      - quality
+    outs:
+      - artifacts/features_clean.csv
+    metrics:
+      - artifacts/quality_report.json:
+          cache: false
+  train:
+    cmd: python -m sprintml.cli train
+    deps:
+      - artifacts/features_clean.csv
+      - src/sprintml/train.py
+    params:
+      - train
+      - gate
+    metrics:
+      - artifacts/train_report.json:
+          cache: false
+    outs:
+      - artifacts/champion

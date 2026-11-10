@@ -1,0 +1,303 @@
+% ============================================================================
+% Camera-ready replacement text for ICICF-2027 Paper 768 (IEEEtran).
+% Drop each block into the matching section of the manuscript.
+% Every number below is produced by paper_revision/code/run_all.sh.
+% Lines marked %CONFIRM must be checked by the authors.
+% Figures: paper_revision/figures/*.png
+% ============================================================================
+
+% ---------------------------------------------------------------- ABSTRACT
+\begin{abstract}
+Laboratory motion capture for sprint biomechanics costs USD 100k--500k, which
+puts it out of reach for most athletes. We present an end-to-end, reproducible
+MLOps pipeline that combines a single 60\,fps smartphone video (MediaPipe Pose)
+with a consumer smartwatch IMU (100\,Hz accelerometer and gyroscope) to extract
+19 sprint biomechanics features. Performance labels come from an objective,
+automatically measured quantity: each athlete's maximal running velocity,
+normalised by body size, rather than subjective ratings. The integration of the
+two sensors is validated quantitatively. Stride frequency from video and from
+the watch agree with a mean absolute error of 0.07\,Hz ($r=0.95$), and
+clock-consistency checks automatically flagged two of nine watch recordings
+that did not belong to the filmed sprint. On commodity hardware the pipeline
+processes a 2--4\,s sprint clip in 2.1\,s, and the exported 52\,KB TFLite
+classifier runs in microseconds. In a leakage-free leave-one-subject-out pilot
+study with 8 athletes (9 trials), three-tier performance classification did
+not exceed chance with statistical significance (best 55.6\%, permutation
+$p=0.16$). Accuracies previously reported for this system arose from data
+leakage, and we document how it occurred. The pipeline is versioned (DVC, MLflow), containerised and covered by 43 automated tests, with a quality
+gate that quarantines mismatched sensor files, a promotion gate that refuses unvalidated models, and drift
+monitoring whose power analysis shows that at least 100 reference recordings are needed before alarms can be armed. The pipeline, measurements and
+negative result define a validated starting point and a concrete
+data-collection target for low-cost sprint analytics.
+\end{abstract}
+
+% ------------------------------------------------- CONTRIBUTIONS (Sec. I end)
+The contributions of this work are:
+(1)~a reproducible smartphone + smartwatch pipeline for sprint biomechanics
+with experiment tracking (MLflow), configuration-driven training and a deployed
+web interface;
+(2)~an objective, annotation-free performance label (body-size-normalised
+maximal velocity) that removes subjective rating from the loop and enables
+automatic labelling of new data;
+(3)~a quantitative validation of video--IMU integration, including automatic
+detection of mismatched sensor files;
+(4)~measured, per-stage latency on two hardware configurations;
+(5)~a leakage-free pilot evaluation, with a power analysis that turns the
+negative result into a concrete data requirement for drift-triggered
+retraining.
+
+% ---------------------------------------------- III-B DATA COLLECTION (replace)
+\subsection{Sprint Dataset}
+Nine maximal-effort fly sprints were recorded from \textbf{eight} athletes (one
+athlete ran two trials) in a single outdoor session on a synthetic track on
+25~March~2026. %CONFIRM: ages, sex, recruitment, ethics approval/consent wording
+Video was captured with a tripod-mounted Samsung Android smartphone %CONFIRM model
+at 1920$\times$1080, 60\,fps (HEVC), with the camera orthogonal to the running
+direction so that athletes crossed the field of view in 0.9--1.7\,s.
+A Samsung Galaxy Watch %CONFIRM model and wrist
+recorded triaxial acceleration and angular velocity at a measured
+99.3--99.6\,Hz using the Sensor Logger application. Seven recordings share one
+camera position and two share a second position; the velocity normalisation in
+Section~\ref{sec:labels} makes measurements comparable across both.
+
+% ------------------------------------------------- III-C LABELS (new section)
+\subsection{Objective Performance Labels}\label{sec:labels}
+Each recording is labelled from a quantity that is \emph{not} a model input:
+the athlete's horizontal velocity. The mid-hip landmark's horizontal position
+is fitted against time with a Theil--Sen estimator ($R^2\geq0.998$ for all
+recordings). The pixel velocity is divided by a posture-invariant body length
+$L$ (trunk + thigh + shank, median over frames), which corresponds to
+$0.779\times$ stature according to standard anthropometric ratios. This yields
+velocity in statures per second, independent of camera distance. Assuming a
+stature of 1.70\,m, velocities range from 6.7 to 9.4\,m/s. Recordings are
+assigned to cohort tertiles (3 per tier): Beginner $<7.45$\,m/s $\leq$
+Intermediate $<7.79$\,m/s $\leq$ Elite. Both trials of the repeated athlete
+fall in the same tier. Because the label is measured automatically, new
+recordings can be labelled without expert annotation. MediaPipe occasionally
+locked onto a static false detection before the runner entered the frame, so
+only the continuous track with the largest horizontal travel is retained.
+
+% ---------------------------------------------- III-D FEATURES (replace lists)
+\subsection{Feature Extraction}
+\textbf{Video (9 features).} Mean knee and hip angles (2-D, Eq.~(1)); knee and
+hip symmetry indices (Eq.~(2)); trunk lean; vertical hip oscillation
+(detrended, in statures); step frequency, ground contact time (GCT) and duty
+factor. Stance is detected when the slower ankle's horizontal speed falls below
+$0.4\,v$ (where $v$ is the runner's speed), because a planted foot is
+stationary in the world frame. This threshold was set so that all recordings
+yield physiologically plausible step rates (3.2--4.6\,Hz) and GCT
+(70--117\,ms); it was not tuned on classification accuracy. Stride length,
+clip duration and frame count are excluded: the first is algebraically
+velocity divided by step rate (label leakage), and the others depend on how
+each clip was trimmed.
+\textbf{IMU (10 features).} Peak, mean and SD of acceleration and angular
+velocity magnitude; RMS jerk (Eq.~(4)); arm-swing frequency (Welch PSD of the
+gyroscope); and SPARC smoothness of acceleration and angular velocity.
+
+% ------------------------------------------- III-E INTEGRATION (replace fusion)
+\subsection{Video--IMU Integration}
+The watch and phone clocks are independent. The IMU segment used is the
+highest-intensity window whose length equals the time the runner is tracked in
+video. Accelerometer and gyroscope streams are merged by nearest timestamp
+(20\,ms tolerance). Fusion is early: the 9 video and 10 IMU features are
+concatenated after per-fold standardisation. Integration is validated in three
+ways (Fig.~\ref{fig:sync}).
+(i)~\emph{Clock consistency:} for 7 of 9 recordings, the video creation time
+follows the watch's last sample by 1.6--5.7\,s (median 2.1\,s). Two recordings
+differ by $-102$\,s and $-422$\,s, meaning those watch files were captured
+during a different run; they are flagged, and Table~\ref{tab:results} includes
+a sensitivity analysis without them.
+(ii)~\emph{Cadence agreement} on the 7 consistent recordings: stride frequency
+from the video wrist landmark versus the watch gyroscope gives MAE 0.073\,Hz,
+bias $-0.05$\,Hz and $r=0.95$.
+(iii)~\emph{Waveform agreement:} the normalised cross-correlation between video
+wrist velocity and the dominant gyroscope axis has $|r|$ of 0.51--0.94
+(median 0.76).
+
+% ------------------------------------------- III-F PROTOCOL (replace splitting)
+\subsection{Evaluation Protocol}
+All models are evaluated with leave-one-subject-out (LOSO) cross-validation (8
+folds; both trials of the repeated athlete are always held out together).
+Within each fold, and using the training athletes only, a StandardScaler is
+fitted and the training set is optionally augmented to 300 samples per class:
+Gaussian jitter at 5\% of feature SD, plus same-class linear interpolation
+($\alpha\sim U(0.1,0.9)$). The held-out athlete never contributes to scaling,
+augmentation or early stopping. Models: logistic regression ($C=1$), RBF-SVM
+($C=1$), random forest (100 trees, depth 5), and the MLP of Fig.~4
+(128--64--32, ReLU, batch normalisation, dropout 0.4/0.3/0.2, L2 $10^{-3}$,
+Adam $10^{-3}$, batch 32, at most 100 epochs, early stopping with patience 10
+on a 15\% validation split of the training fold, 5 seeds). We report accuracy,
+balanced accuracy, macro precision, recall and F1 over the 9 pooled
+out-of-fold predictions; 95\% CIs from 2000 subject-level bootstrap resamples;
+and label-permutation $p$-values (200 permutations, classical models only).
+
+% ---------------------------------------------------- IV RESULTS (replace)
+\begin{table}[t]
+\caption{LOSO classification (chance = 33.3\%). Best model per modality.}
+\label{tab:results}
+\centering
+\begin{tabular}{llcccc}
+\hline
+Modality & Model & Acc. & Macro F1 & 95\% CI & $p$ \\
+\hline
+\multicolumn{6}{l}{\emph{All recordings (8 athletes, 9 trials)}}\\
+Video & MLP & 35.6$\pm$16.5 & 0.31 & 13--75 & -- \\
+IMU   & LogReg+aug & 55.6 & 0.48 & 25--88 & 0.16 \\
+Fused & MLP & 28.9$\pm$16.9 & 0.24 & 13--89 & -- \\
+\multicolumn{6}{l}{\emph{Watch files verified (6 athletes, 7 trials)}}\\
+Video & SVM+aug & 28.6 & 0.33 & 0--67 & 0.44 \\
+IMU   & RF+aug & 57.1 & 0.52 & 25--86 & 0.10 \\
+Fused & RF+aug & 14.3 & 0.10 & 0--33 & 0.70 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Classification Results}
+Table~\ref{tab:results} and Fig.~\ref{fig:cm} report the leakage-free results.
+No configuration is significantly above chance (smallest permutation
+$p=0.10$), and early fusion does not outperform the single modalities. The
+paper's MLP with augmentation reaches 26.7\% (video), 51.1\% (IMU) and 0\%
+(fused). Several configurations score below chance, a known artefact of
+leave-one-out validation with balanced classes of size 3, where removing a
+test sample biases training against its class. A LOSO ridge regression of
+velocity also fails to beat a training-mean predictor (MAE 0.80--0.88\,m/s
+vs.\ 0.71\,m/s). Descriptively, GCT correlates negatively ($r=-0.52$) and step
+frequency positively ($r=0.40$) with velocity, consistent with sprint
+literature~[15], but $n=9$ is too small for inference.
+
+\emph{Relation to previously reported accuracy.} An earlier version of this
+system reported 82--100\% accuracy. Those figures came from (a) labels derived
+by K-Means clustering of the input features themselves, and (b) synthetic
+samples generated from all athletes before the train/test split, so that every
+test athlete had near-copies in the training data. Removing both effects gives
+the results above. We report this explicitly because the same pitfalls are
+common in small-sample sports analytics.
+
+% --------------------------------------------- IV-E LATENCY (replace)
+\begin{table}[t]
+\caption{Measured latency, median (p95). MediaPipe 0.10.9, TF 2.18.1.}
+\label{tab:latency}
+\centering
+\begin{tabular}{lcc}
+\hline
+Stage & M5, all cores & M5, E-cores only \\
+\hline
+Decode / frame & 1.4\,ms & 10.6\,ms \\
+Pose lite / frame & 7.1 (13.0)\,ms & 45.8 (75.8)\,ms \\
+Pose full / frame$^\dagger$ & 11.5 (17.9)\,ms & 61.3 (114.2)\,ms \\
+Pose heavy / frame & 49.3 (56.3)\,ms & 212.3 (273.3)\,ms \\
+Features / sprint & 8.1\,ms & 49.9\,ms \\
+MLP, Keras \texttt{predict} & 14.5\,ms & 95.3\,ms \\
+MLP, TFLite (52\,KB) & 1.1\,$\mu$s & 9.3\,$\mu$s \\
+End-to-end / clip$^\dagger$ & 2.1\,s & 12.7\,s \\
+\hline
+\multicolumn{3}{l}{$^\dagger$deployed configuration (model complexity 1)}
+\end{tabular}
+\end{table}
+Pose estimation dominates the runtime (Table~\ref{tab:latency}). Once the
+classifier is exported to TFLite, its cost is negligible; the Keras
+\texttt{predict} overhead (14.5--95\,ms) is framework overhead, not model
+compute. On-phone execution was not measured and is left to future work.
+
+% --------------------------------------------- V-D MLOPS SYSTEM (new, replaces drift section)
+\subsection{MLOps System}
+\emph{Architecture.} A DVC pipeline (pose $\rightarrow$ features $\rightarrow$ quality gate $\rightarrow$ training)
+records the raw-data hash; every MLflow run logs the git commit, data hash, parameters, leave-one-subject-out (LOSO)
+metrics and report. A model is served only if it is the registry's \texttt{champion}. A challenger is promoted only if
+it is significantly above chance (permutation $p<0.05$, max-statistic over all candidates) and its macro-F1 is not below
+the champion's; the first model is registered as \emph{provisional} and the API labels it as such. The FastAPI service
+(\texttt{/predict}, \texttt{/health}, \texttt{/metrics}, \texttt{/drift}) is packaged in Docker; each request's features
+go to a feature store used by the drift monitor and the retraining job. 43 automated tests cover velocity recovery,
+leakage, the quality gate, drift false-alarm and power, the promotion gate, registry restore and the API contract.
+
+\emph{Data-quality gate.} Seven automatic checks (frame rate, IMU rate, runner-track fit, tracked frames, finite features,
+video--IMU cadence agreement, clock consistency) quarantine Chandra1 and Jeeva without manual inspection.
+
+\emph{Drift thresholds.} Each feature is tested with a two-sample KS test at the Bonferroni-corrected
+$\alpha=0.05/19=0.0026$ (family-wise false-alarm rate $\leq5\%$; 300 null windows gave $\leq10\%$ in testing); PSI is a
+secondary signal. The power analysis (Fig.~\ref{fig:power}) shows that a 1-SD shift is detected with 84\% probability
+only with a reference of $\geq100$ and a window of $\geq30$; alarms are therefore \emph{armed} only above those sizes
+and are informational below them. Our reference currently has 7 recordings, so no alarm is armed.
+Retraining is triggered by an armed alarm, by every 3 new quality-passed recordings, or manually.
+
+\emph{Device-shift replay} (7 real clips through the API): an unmodified replay raises no alarm; a 50\,Hz watch is
+rejected by the quality gate in 7/7 cases; a $\times1.5$ accelerometer gain raises an informational alarm on
+\texttt{peak\_accel}, \texttt{std\_accel} and \texttt{rms\_jerk} ($p=0.00058$).
+
+\emph{Retraining under a changing population.} Replaying the nine recordings in capture order from a cold start, two
+recordings are quarantined, a first (provisional, not significant: $p=0.099$) model appears at the 8th arrival, and the
+retrained challenger at the 9th is refused ($p=0.65$, macro-F1 0.24 vs.\ 0.56). The loop and gate therefore work, but
+\textbf{an accuracy benefit from retraining could not be demonstrated} at this sample size.
+
+\begin{table}[t]
+\caption{Load and fault tests (Docker, 10-core node, real 2--3\,s clips including upload). Zero failures in 214 requests.}
+\label{tab:ops}\centering\small
+\begin{tabular}{ccccc}
+\hline
+Workers & Users & Req/s & Median & p95 \\
+\hline
+1 & 1 & 0.48 & 2.1\,s & 2.1\,s \\
+1 & 4 & 1.21 & 3.3\,s & 3.5\,s \\
+2 & 4 & 1.14 & 3.5\,s & 3.6\,s \\
+4 & 4 & 1.04 & 3.8\,s & 4.2\,s \\
+4 & 8 & 1.11 & 6.5\,s & 7.0\,s \\
+\hline
+\multicolumn{5}{l}{Worker kill: 0 failed probes, respawn 0.03\,s. Server crash: healthy in 0.9--1.0\,s.}\\
+\multicolumn{5}{l}{Container restart: 3.8--3.9\,s. Fault-free probe: 60/60 over 5\,min.}\\
+\end{tabular}
+\end{table}
+Throughput saturates near 1.2 clips/s on one node irrespective of worker count, because MediaPipe already parallelises
+inside a request; scaling beyond one node was not tested. We make no availability claim: a 5-minute window cannot
+support one.
+
+% --------------------------------------------- V-C LIMITATIONS (replace)
+\subsection{Limitations}
+(1)~Eight athletes from a single session: the classification results are a
+pilot and do not support claims of generalisation.
+(2)~Tiers are cohort-relative tertiles of velocity; absolute m/s assumes a
+1.70\,m stature (an error of about $\pm$5\% per 8.5\,cm of height difference).
+(3)~2-D pose from a single side view at roughly 190\,px body height;
+joint-angle accuracy was not validated against motion capture.
+(4)~Two of nine watch files were not recorded during the filmed sprint.
+(5)~Only the portion of the fly zone inside the camera's field of view
+(0.9--1.7\,s) is analysed.
+(6)~Latency was measured on one laptop CPU in two configurations, not on
+phones.
+
+% --------------------------------------------- REPRODUCIBILITY (new table)
+\begin{table}[t]
+\caption{Reproducibility settings}\label{tab:repro}
+\centering\small
+\begin{tabular}{ll}
+\hline
+Camera & Samsung Android phone %CONFIRM model
+, 1080p HEVC, 60\,fps, tripod\\
+Watch & Samsung Galaxy Watch %CONFIRM model
+, Sensor Logger, 99.3--99.6\,Hz\\
+Compute & Apple M5 (10 cores), 16\,GB RAM, macOS 27.0.1\\
+Software & Python 3.11.17, MediaPipe 0.10.9, TF 2.18.1,\\
+ & Keras 3.15.1, scikit-learn 1.7.2, NumPy 1.26.4,\\
+ & SciPy 1.17.1, OpenCV 4.11, FFmpeg 9.0.2\\
+Pose & complexity 1, det./track conf. 0.5\\
+Seeds & 42 (MLP: 42--46)\\
+Pipeline & DVC + MLflow, Docker image, \texttt{params.yaml}\\
+ & MLflow 3.5.1, DVC 3.67.1, FastAPI 0.162.2, pandas 2.3.3\\
+Code & \url{https://github.com/...} %CONFIRM\\
+\hline
+\end{tabular}
+\end{table}
+
+% --------------------------------------------- CONCLUSION (replace)
+\section{Conclusion}
+We presented a reproducible smartphone + smartwatch pipeline for sprint
+biomechanics, with an objective, annotation-free velocity label, a
+quantitatively validated video--IMU integration (stride-frequency MAE
+0.07\,Hz, $r=0.95$; automatic detection of mismatched sensor files), and
+measured per-stage latency (2.1\,s per clip; microsecond-scale classifier
+inference in TFLite). A leakage-free pilot with 8 athletes showed that
+three-tier skill classification is not yet reliable, and that earlier
+reported accuracies were artefacts of label circularity and augmentation
+leakage. A power analysis of KS-based drift monitoring sets the next
+milestone: at least 100 labelled recordings before automated retraining
+triggers become reliable. Because labelling is automatic, the pipeline can
+reach that milestone at low cost through routine use.

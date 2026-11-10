@@ -1,0 +1,159 @@
+schema: '2.0'
+stages:
+  pose:
+    cmd: python -m sprintml.cli pose
+    deps:
+    - path: Phase_2/data/sprint_raw
+      hash: md5
+      md5: f44e1c193cc6df49809b0240cde2be22.dir
+      size: 52960714
+      nfiles: 29
+    - path: src/sprintml/pose.py
+      hash: md5
+      md5: 03a99b984f8a28352b96b681cce277df
+      size: 3358
+    params:
+      params.yaml:
+        pose:
+          complexity: 1
+          min_detection_confidence: 0.5
+          min_tracking_confidence: 0.5
+    outs:
+    - path: artifacts/pose
+      hash: md5
+      md5: 2c9810dd17dd4966e6c3db47181c4fd9.dir
+      size: 2149354
+      nfiles: 18
+  features:
+    cmd: python -m sprintml.cli features
+    deps:
+    - path: Phase_2/data/sprint_raw
+      hash: md5
+      md5: f44e1c193cc6df49809b0240cde2be22.dir
+      size: 52960714
+      nfiles: 29
+    - path: artifacts/pose
+      hash: md5
+      md5: 2c9810dd17dd4966e6c3db47181c4fd9.dir
+      size: 2149354
+      nfiles: 18
+    - path: src/sprintml/features.py
+      hash: md5
+      md5: 6d3b6acfe14abe92ead6b4419a46df75
+      size: 7522
+    - path: src/sprintml/imu.py
+      hash: md5
+      md5: 6b0f0db450e446939ed46af695cd01e4
+      size: 1265
+    - path: src/sprintml/labels.py
+      hash: md5
+      md5: 62a6ee5c7422543f9e5f304f3018b3e1
+      size: 1775
+    params:
+      params.yaml:
+        features:
+          stance_speed_fraction: 0.4
+          merge_gap_frames: 1
+          min_contact_frames: 2
+          min_step_interval_s: 0.15
+        labels:
+          seg_to_stature: 0.779
+          assumed_stature_m: 1.7
+          min_visibility: 0.5
+        subjects:
+          Amith: S1
+          Chandra1: S2
+          Hanshi2: S3
+          Jeeva: S4
+          Mohammed_araar: S5
+          Sachin: S6
+          Tejas: S7
+          Yeshwanth: S8
+          Yeshwanth_trail_2: S8
+    outs:
+    - path: artifacts/features_raw.csv
+      hash: md5
+      md5: ee182d20702c50ce139b39d1ce7d1722
+      size: 5575
+  validate:
+    cmd: python -m sprintml.cli validate
+    deps:
+    - path: artifacts/features_raw.csv
+      hash: md5
+      md5: ee182d20702c50ce139b39d1ce7d1722
+      size: 5575
+    - path: src/sprintml/quality.py
+      hash: md5
+      md5: 83094198eb8dd9a904f07840d0dac2de
+      size: 2748
+    params:
+      params.yaml:
+        quality:
+          min_fps: 50
+          imu_hz_range:
+          - 90
+          - 110
+          min_track_r2: 0.99
+          min_tracked_frames: 40
+          max_cadence_diff_hz: 0.3
+          max_clock_dev_s: 5.0
+    outs:
+    - path: artifacts/features_clean.csv
+      hash: md5
+      md5: 5617fea242e7e2e1e6cee7a4a3519f39
+      size: 4399
+    - path: artifacts/quality_report.json
+      hash: md5
+      md5: ca6a197bb23879412abfbae4bf2fa849
+      size: 7862
+  train:
+    cmd: python -m sprintml.cli train
+    deps:
+    - path: artifacts/features_clean.csv
+      hash: md5
+      md5: 5617fea242e7e2e1e6cee7a4a3519f39
+      size: 4399
+    - path: src/sprintml/train.py
+      hash: md5
+      md5: 11170392a55771446c77699540a986f3
+      size: 13391
+    params:
+      params.yaml:
+        gate:
+          alpha: 0.05
+          min_samples_per_class: 2
+          min_subjects: 5
+        train:
+          seed: 42
+          n_aug_per_class: 300
+          aug_noise: 0.05
+          n_perm: 200
+          candidates:
+          - features: video
+            model: logreg
+            augment: true
+          - features: imu
+            model: logreg
+            augment: true
+          - features: fused
+            model: logreg
+            augment: true
+          - features: video
+            model: rf
+            augment: true
+          - features: imu
+            model: rf
+            augment: true
+          - features: fused
+            model: rf
+            augment: true
+    outs:
+    - path: artifacts/champion
+      hash: md5
+      md5: 403108d0910790da044f4f6e1560c84a.dir
+      size: 5733
+      nfiles: 3
+    - path: artifacts/train_report.json
+      hash: md5
+      md5: cd7756d93cd763a948f2d03171ad3391
+      size: 833

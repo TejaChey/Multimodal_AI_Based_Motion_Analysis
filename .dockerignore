@@ -1,0 +1,13 @@
+venv
+.venv
+.git
+Phase_*/data
+Phase_*/results
+results
+mlruns
+mlflow.db
+artifacts
+paper_revision
+**/__pycache__
+*.mp4
+*.avi

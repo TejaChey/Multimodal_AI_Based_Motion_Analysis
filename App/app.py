@@ -3,7 +3,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from inference import run_inference
+from inference import fetch_reference, run_inference
 from coaching_engine import generate_coaching_feedback
 
 # ── 1. DASHBOARD CONFIGURATION ───────────────────────────────────────────────
@@ -167,7 +167,11 @@ if video_file and accel_file and gyro_file:
             st.markdown("---")
             
             # Skill Badge Banner using the new .skill-badge CSS class
-            st.markdown(f"## Predicted Athlete Skill Class: <span class='skill-badge'>{label.upper()}</span>", unsafe_allow_html=True)
+            st.markdown(f"## Measured Performance Tier: <span class='skill-badge'>{label.upper()}</span>", unsafe_allow_html=True)
+            st.caption(f"Measured velocity: {metrics['measured_velocity_mps']} m/s (from video, cohort-relative tier). "
+                       f"Model tier: {metrics['model_tier']}.")
+            if "PROVISIONAL" in metrics["model_status"]:
+                st.warning(metrics["model_status"])
             st.markdown("<br>", unsafe_allow_html=True)
 
             dash_col1, dash_col2 = st.columns([1, 2])
@@ -175,17 +179,17 @@ if video_file and accel_file and gyro_file:
             # Left Column: Raw Metrics
             with dash_col1:
                 st.markdown("### Extracted Features")
-                st.metric("Stride Freq (Hz)", f"{metrics.get('stride_freq_hz', 0)}")
-                st.metric("Peak Accel (m/s²)", f"{metrics.get('peak_accel_mag', 0)}")
-                st.metric("Flight Ratio (%)", f"{metrics.get('flight_ratio', 0)*100:.1f}")
-                st.metric("Knee Angle Mean (°)", f"{metrics.get('knee_angle_mean', 0)}")
-                st.metric("Accel Smoothness", f"{metrics.get('movement_smoothness_accel', 0)}")
+                st.metric("Velocity (m/s)", f"{metrics['measured_velocity_mps']}")
+                st.metric("Step Freq (Hz)", f"{metrics['step_freq_video_hz']:.2f}")
+                st.metric("Ground Contact (ms)", f"{metrics['gct_ms']:.0f}")
+                st.metric("Peak Accel (m/s²)", f"{metrics['peak_accel']:.1f}")
+                st.metric("Knee Angle Mean (°)", f"{metrics['knee_angle_mean']:.1f}")
 
             # Right Column: The Coaching Engine Feed
             with dash_col2:
-                st.markdown("### Expert Coaching Engine Notes")
-                st.write("*Analyzing structural deviations against Elite mathematical profiles...*")
+                st.markdown("### Comparison with Reference Tiers")
+                st.write("*Descriptive comparison with the recordings in the training set.*")
                 
-                tips = generate_coaching_feedback(metrics)
+                tips = generate_coaching_feedback(metrics, fetch_reference())
                 for tip in tips:
                     st.markdown(f"<div class='coaching-tip'>{tip}</div>", unsafe_allow_html=True)

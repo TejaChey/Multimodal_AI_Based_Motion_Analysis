@@ -1,0 +1,15 @@
+# Serving image (no TensorFlow needed: the champion is a scikit-learn model)
+numpy==1.26.4
+pandas==2.3.3
+scipy==1.17.1
+scikit-learn==1.7.2
+joblib==1.6.0
+PyYAML==6.0.3
+opencv-python-headless==4.11.0.86
+mediapipe==0.10.9
+protobuf==3.20.3
+matplotlib==3.11.2
+fastapi==0.162.2
+uvicorn==0.54.0
+python-multipart==0.0.33
+prometheus_client==0.26.0

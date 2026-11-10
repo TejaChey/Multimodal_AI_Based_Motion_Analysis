@@ -137,3 +137,41 @@ This will open up `localhost:8501` in your browser. Drag and drop any raw sprint
 
 ---
 
+---
+
+## MLOps system (`src/sprintml`)  ·  current, supersedes the Phase 3 / Streamlit-in-process description above
+
+> **Honest status.** The system is real and tested, but with 8 athletes (9 recordings, 7 pass the quality gate)
+> the classifier is **not statistically above chance** (leave-one-subject-out, permutation p ≈ 0.7). The service
+> therefore reports the *measured running velocity* as the primary result and labels the model's tier
+> **PROVISIONAL**. Earlier accuracies (82 % / 100 %) came from circular labels and augmentation leakage.
+> See `paper_revision/` for the full audit.
+
+```
+raw video + watch CSVs ─▶ DVC pipeline: pose → features → validate (quality gate) → train (LOSO + gate) ─▶ MLflow registry
+                                                                                                         │ champion alias
+FastAPI /predict ◀── loads artifacts/champion ◀── promoted only if significant & not worse ◀─────────────┘
+   │ every request → SQLite feature store → drift monitor (KS + PSI, armed at n_ref≥100, window≥30) → retrain trigger
+   └ /health /metrics (Prometheus) /drift /model /reference
+```
+
+| Component | Where |
+|---|---|
+| Pipeline code (pose, labels, features, quality gate, training, monitor, service) | `src/sprintml/` |
+| Reproducible pipeline + data versioning | `dvc.yaml`, `dvc.lock`, `params.yaml` |
+| Experiment tracking + model registry (`champion` / `challenger` aliases) | MLflow (`artifacts/mlflow.db`) |
+| Serving | `Dockerfile`, `docker-compose.yml` (API + drift/retrain worker) |
+| Tests (43) | `tests/`  ·  CI: `.github/workflows/ci.yml` |
+| Load, recovery, uptime, drift-replay | `scripts/` |
+
+```bash
+python3.11 -m venv .venv && .venv/bin/pip install -r requirements-ci.txt dvc locust
+export PYTHONPATH=src PATH="$PWD/.venv/bin:$PATH"
+dvc repro                       # pose -> features -> validate -> train (registers + gates the model)
+pytest                          # 43 tests (~10 s)
+docker compose up --build       # API on :8000 + monitor/retrain worker
+streamlit run App/app.py        # thin client (SPRINTML_API_URL=http://localhost:8000)
+python -m sprintml.cli replay   # chronological retraining replay through the real loop
+```
+
+Raw recordings are not in git (consent): DVC tracks their hash in `dvc.lock`; add a remote with `dvc remote add` only if the consent forms permit sharing.

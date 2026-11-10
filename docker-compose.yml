@@ -1,0 +1,21 @@
+# docker compose up --build   (expects ./artifacts with a trained champion: `dvc repro`)
+services:
+  api:
+    build: .
+    ports: ["8000:8000"]
+    environment: {WORKERS: "2"}
+    volumes: ["./artifacts:/data"]
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+  worker:            # drift monitor + automated retraining loop (shares the feature store)
+    build: .
+    command: ["python", "-m", "sprintml.cli", "loop", "--interval", "300"]
+    healthcheck: {disable: true}
+    volumes: ["./artifacts:/data"]
+    restart: always
+    depends_on: [api]

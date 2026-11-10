@@ -24,3 +24,63 @@ training:
 mlflow:
   experiment_name: "Sprint-Biomechanics-DL"
   tracking_uri: "sqlite:///mlflow.db"
+
+
+# ═══ sprintml MLOps pipeline (src/sprintml) ═══════════════════════════════════
+subjects:            # recording folder -> athlete (two trials of one athlete share an id)
+  Amith: S1
+  Chandra1: S2
+  Hanshi2: S3
+  Jeeva: S4
+  Mohammed_araar: S5
+  Sachin: S6
+  Tejas: S7
+  Yeshwanth: S8
+  Yeshwanth_trail_2: S8
+
+pose: {complexity: 1, min_detection_confidence: 0.5, min_tracking_confidence: 0.5}
+labels: {seg_to_stature: 0.779, assumed_stature_m: 1.70, min_visibility: 0.5}
+features:
+  stance_speed_fraction: 0.4   # chosen for plausible step rate / GCT on all clips, not tuned on accuracy
+  merge_gap_frames: 1
+  min_contact_frames: 2
+  min_step_interval_s: 0.15
+
+quality:             # automatic data-quality gate (calibrated on the 9 recordings; re-validate with more data)
+  min_fps: 50                # phones record variable-fps video averaging 58-60; blocks 30 fps footage
+  imu_hz_range: [90, 110]
+  min_track_r2: 0.99
+  min_tracked_frames: 40
+  max_cadence_diff_hz: 0.3
+  max_clock_dev_s: 5.0       # |video-watch clock offset - cohort median|
+
+train:
+  seed: 42
+  n_aug_per_class: 300
+  aug_noise: 0.05
+  n_perm: 200
+  candidates:        # evaluated by leave-one-subject-out; best by macro-F1; p-value uses the max statistic
+    - {features: video, model: logreg, augment: true}
+    - {features: imu,   model: logreg, augment: true}
+    - {features: fused, model: logreg, augment: true}
+    - {features: video, model: rf,     augment: true}
+    - {features: imu,   model: rf,     augment: true}
+    - {features: fused, model: rf,     augment: true}
+
+gate:                # promotion gate
+  alpha: 0.05
+  min_samples_per_class: 2
+  min_subjects: 5
+
+monitor:
+  alpha_family: 0.05         # Bonferroni across features
+  min_reference: 100         # alarms armed only above these sizes (see paper power analysis)
+  min_window: 30
+  window: 30
+  psi_alert: 0.25
+
+retrain:
+  every_n_new: 3             # also triggered by an armed drift alarm or manually
+
+mlops:
+  experiment_name: sprint-tier-mlops

@@ -1,0 +1,44 @@
+A. detection rate (n_ref=9 and 100):
+delta_sd         0.0   0.5   1.0   2.0
+n_ref window_m                        
+9     5         0.02  0.02  0.04  0.24
+      10        0.02  0.03  0.09  0.52
+      20        0.05  0.05  0.19  0.80
+      30        0.04  0.06  0.21  0.87
+      50        0.05  0.08  0.27  0.91
+      100       0.03  0.07  0.29  0.94
+100   5         0.05  0.07  0.13  0.70
+      10        0.04  0.07  0.32  0.97
+      20        0.05  0.12  0.65  1.00
+      30        0.05  0.18  0.84  1.00
+      50        0.04  0.28  0.96  1.00
+      100       0.05  0.49  1.00  1.00
+
+B. device-shift scenarios
+Traceback (most recent call last):
+  File "/Users/teja/Projects/Multimodal-AI-Based-Motion-Analysis-/paper_revision/code/07_drift_retraining.py", line 179, in <module>
+    print("\nB. device-shift scenarios"); print(part_b().round(3).to_string(index=False))
+                                                ^^^^^^^^
+  File "/Users/teja/Projects/Multimodal-AI-Based-Motion-Analysis-/paper_revision/code/07_drift_retraining.py", line 140, in part_b
+    "acc_frozen_model": loso(X0, Xs, y, groups),
+                        ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/teja/Projects/Multimodal-AI-Based-Motion-Analysis-/paper_revision/code/07_drift_retraining.py", line 114, in loso
+    pred[te] = E.MODELS[MODEL](SEED).fit(sc.transform(train_df[~te]), y[~te]).predict(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/teja/Projects/Multimodal-AI-Based-Motion-Analysis-/.venv/lib/python3.11/site-packages/sklearn/linear_model/_base.py", line 375, in predict
+    scores = self.decision_function(X)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/teja/Projects/Multimodal-AI-Based-Motion-Analysis-/.venv/lib/python3.11/site-packages/sklearn/linear_model/_base.py", line 352, in decision_function
+    X = validate_data(self, X, accept_sparse="csr", reset=False)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/teja/Projects/Multimodal-AI-Based-Motion-Analysis-/.venv/lib/python3.11/site-packages/sklearn/utils/validation.py", line 2954, in validate_data
+    out = check_array(X, input_name="X", **check_params)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/teja/Projects/Multimodal-AI-Based-Motion-Analysis-/.venv/lib/python3.11/site-packages/sklearn/utils/validation.py", line 1105, in check_array
+    _assert_all_finite(
+  File "/Users/teja/Projects/Multimodal-AI-Based-Motion-Analysis-/.venv/lib/python3.11/site-packages/sklearn/utils/validation.py", line 120, in _assert_all_finite
+    _assert_all_finite_element_wise(
+  File "/Users/teja/Projects/Multimodal-AI-Based-Motion-Analysis-/.venv/lib/python3.11/site-packages/sklearn/utils/validation.py", line 169, in _assert_all_finite_element_wise
+    raise ValueError(msg_err)
+ValueError: Input X contains NaN.
+LogisticRegression does not accept missing values encoded as NaN natively. For supervised learning, you might want to consider sklearn.ensemble.HistGradientBoostingClassifier and Regressor which accept missing values encoded as NaNs natively. Alternatively, it is possible to preprocess the data, for instance by using an imputer transformer in a pipeline or drop samples with missing values. See https://scikit-learn.org/stable/modules/impute.html You can find a list of all estimators that handle NaN values at the following page: https://scikit-learn.org/stable/modules/impute.html#estimators-that-handle-nan-values

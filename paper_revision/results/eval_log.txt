@@ -1,0 +1,49 @@
+[all_9] Video-only LogReg  aug=False acc=0.222 (sd 0.000) F1=0.167 CI=[0.00,0.56] p=0.617
+[all_9] Video-only LogReg  aug=True  acc=0.333 (sd 0.000) F1=0.324 CI=[0.09,0.75] p=0.438
+[all_9] Video-only SVM-RBF aug=False acc=0.000 (sd 0.000) F1=0.000 CI=[0.00,0.00] p=1.000
+[all_9] Video-only SVM-RBF aug=True  acc=0.333 (sd 0.000) F1=0.324 CI=[0.00,0.75] p=0.164
+[all_9] Video-only RF      aug=False acc=0.222 (sd 0.000) F1=0.167 CI=[0.00,0.56] p=0.453
+[all_9] Video-only RF      aug=True  acc=0.000 (sd 0.000) F1=0.000 CI=[0.00,0.00] p=1.000
+[all_9] Video-only MLP     aug=False acc=0.356 (sd 0.165) F1=0.310 CI=[0.12,0.75] p=nan
+[all_9] Video-only MLP     aug=True  acc=0.267 (sd 0.061) F1=0.230 CI=[0.00,0.56] p=nan
+[all_9] IMU-only   LogReg  aug=False acc=0.444 (sd 0.000) F1=0.357 CI=[0.12,0.75] p=0.154
+[all_9] IMU-only   LogReg  aug=True  acc=0.556 (sd 0.000) F1=0.476 CI=[0.25,0.88] p=0.164
+[all_9] IMU-only   SVM-RBF aug=False acc=0.000 (sd 0.000) F1=0.000 CI=[0.00,0.00] p=1.000
+[all_9] IMU-only   SVM-RBF aug=True  acc=0.444 (sd 0.000) F1=0.435 CI=[0.12,0.75] p=0.104
+[all_9] IMU-only   RF      aug=False acc=0.333 (sd 0.000) F1=0.262 CI=[0.00,0.62] p=0.259
+[all_9] IMU-only   RF      aug=True  acc=0.222 (sd 0.000) F1=0.222 CI=[0.00,0.50] p=0.592
+[all_9] IMU-only   MLP     aug=False acc=0.244 (sd 0.093) F1=0.177 CI=[0.00,0.56] p=nan
+[all_9] IMU-only   MLP     aug=True  acc=0.511 (sd 0.186) F1=0.491 CI=[0.00,0.56] p=nan
+[all_9] Fused      LogReg  aug=False acc=0.000 (sd 0.000) F1=0.000 CI=[0.00,0.00] p=1.000
+[all_9] Fused      LogReg  aug=True  acc=0.111 (sd 0.000) F1=0.111 CI=[0.00,0.38] p=0.900
+[all_9] Fused      SVM-RBF aug=False acc=0.000 (sd 0.000) F1=0.000 CI=[0.00,0.00] p=1.000
+[all_9] Fused      SVM-RBF aug=True  acc=0.000 (sd 0.000) F1=0.000 CI=[0.00,0.00] p=1.000
+[all_9] Fused      RF      aug=False acc=0.111 (sd 0.000) F1=0.083 CI=[0.00,0.38] p=0.617
+[all_9] Fused      RF      aug=True  acc=0.000 (sd 0.000) F1=0.000 CI=[0.00,0.00] p=1.000
+[all_9] Fused      MLP     aug=False acc=0.289 (sd 0.169) F1=0.242 CI=[0.12,0.89] p=nan
+[all_9] Fused      MLP     aug=True  acc=0.000 (sd 0.000) F1=0.000 CI=[0.00,0.00] p=nan
+[imu_matched_7] Video-only LogReg  aug=False acc=0.143 (sd 0.000) F1=0.133 CI=[0.00,0.50] p=0.706
+[imu_matched_7] Video-only LogReg  aug=True  acc=0.286 (sd 0.000) F1=0.222 CI=[0.00,0.67] p=0.572
+[imu_matched_7] Video-only SVM-RBF aug=False acc=0.000 (sd 0.000) F1=0.000 CI=[0.00,0.00] p=1.000
+[imu_matched_7] Video-only SVM-RBF aug=True  acc=0.286 (sd 0.000) F1=0.333 CI=[0.00,0.67] p=0.443
+[imu_matched_7] Video-only RF      aug=False acc=0.286 (sd 0.000) F1=0.190 CI=[0.00,0.67] p=0.388
+[imu_matched_7] Video-only RF      aug=True  acc=0.000 (sd 0.000) F1=0.000 CI=[0.00,0.00] p=1.000
+[imu_matched_7] IMU-only   LogReg  aug=False acc=0.429 (sd 0.000) F1=0.389 CI=[0.14,0.75] p=0.234
+[imu_matched_7] IMU-only   LogReg  aug=True  acc=0.429 (sd 0.000) F1=0.389 CI=[0.14,0.71] p=0.279
+[imu_matched_7] IMU-only   SVM-RBF aug=False acc=0.143 (sd 0.000) F1=0.095 CI=[0.00,0.50] p=0.701
+[imu_matched_7] IMU-only   SVM-RBF aug=True  acc=0.286 (sd 0.000) F1=0.190 CI=[0.00,0.57] p=0.428
+[imu_matched_7] IMU-only   RF      aug=False acc=0.286 (sd 0.000) F1=0.167 CI=[0.00,0.57] p=0.448
+[imu_matched_7] IMU-only   RF      aug=True  acc=0.571 (sd 0.000) F1=0.524 CI=[0.25,0.86] p=0.104
+[imu_matched_7] Fused      LogReg  aug=False acc=0.000 (sd 0.000) F1=0.000 CI=[0.00,0.00] p=1.000
+[imu_matched_7] Fused      LogReg  aug=True  acc=0.000 (sd 0.000) F1=0.000 CI=[0.00,0.00] p=1.000
+[imu_matched_7] Fused      SVM-RBF aug=False acc=0.000 (sd 0.000) F1=0.000 CI=[0.00,0.00] p=1.000
+[imu_matched_7] Fused      SVM-RBF aug=True  acc=0.000 (sd 0.000) F1=0.000 CI=[0.00,0.00] p=1.000
+[imu_matched_7] Fused      RF      aug=False acc=0.000 (sd 0.000) F1=0.000 CI=[0.00,0.00] p=1.000
+[imu_matched_7] Fused      RF      aug=True  acc=0.143 (sd 0.000) F1=0.095 CI=[0.00,0.33] p=0.701
+       subset   modality  MAE_mps  MAE_baseline_mean_mps  pearson_r
+        all_9 Video-only    0.874                  0.710     -0.634
+        all_9   IMU-only    0.876                  0.710     -0.398
+        all_9      Fused    0.800                  0.710     -0.739
+imu_matched_7 Video-only    0.963                  0.841     -0.794
+imu_matched_7   IMU-only    1.003                  0.841     -0.173
+imu_matched_7      Fused    0.984                  0.841     -0.722

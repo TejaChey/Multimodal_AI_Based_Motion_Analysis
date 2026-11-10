@@ -57,3 +57,8 @@ mlruns/
 # Keep documentation and requirements
 !README.md
 !requirements.txt
+
+# MLOps runtime artifacts (versioned by DVC / MLflow, not git)
+/artifacts/
+.dvc/cache
+.dvc/tmp
