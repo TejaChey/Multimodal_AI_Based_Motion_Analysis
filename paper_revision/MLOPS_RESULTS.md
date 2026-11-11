@@ -90,3 +90,35 @@ To collect a defensible availability figure, leave `python scripts/uptime_probe.
 - Quality-gate thresholds were set after inspecting these 9 recordings (e.g. `min_fps` 50 because phones record 58–60 fps variable-rate video); they need re-validation on new data.
 - Pose numbers differ slightly between macOS and the Linux container (e.g. Amith 8.30 vs 8.32 m/s), as expected for different numerical back-ends; pin the platform when quoting results.
 - Environment note: `protobuf==3.20.3` is required by MediaPipe 0.10.9 and TensorFlow; MLflow prints a harmless dependency warning for it.
+
+
+---
+
+## 9. Second round (2026-11-11): trying to make the original paper's claims real
+
+Built and measured on the same machine. What was and was not achievable:
+
+| Original claim | Outcome |
+|---|---|
+| Prometheus + Grafana monitoring | **Built.** Metrics aggregated across uvicorn workers; worker exports drift/retrain metrics; provisioned Grafana dashboard (`deploy/grafana`); verified live with Locust load |
+| Slack alerts | **Built and tested against a mock webhook** (`SPRINTML_WEBHOOK_URL`); not tested against real Slack |
+| Kubernetes, rolling updates, autoscaling | **Built and tested on a local kind cluster** (`deploy/k8s`): probes, rolling update, HPA 2-5 pods. Single node only |
+| TFLite INT8 + pruning | **Built.** 53.4 KB -> 19.1 KB (INT8), 11.9 KB gzipped (50 % pruning); 99.6-100 % agreement with FP32. The old "12 MB -> 1.8 MB" cannot be true (model was never larger than 53 KB) |
+| 99.5 % uptime | **Not claimable.** A long probe is running (`artifacts/uptime_long.csv`; summarise with `scripts/uptime_summary.py`) |
+| 95 ms on a Pixel 6 | **Not measured** (no phone); laptop latency only |
+| 50 users, <100 ms, scales with pods | **Not true.** One node saturates ~0.8-1.2 clips/s; at 50 users served latency is ~22 s and 66 % of requests are shed |
+| 82 % accuracy, McNemar A/B, Optuna 82.3 %, weekly retraining | **Not achievable / not done.** No model is above chance with 8 athletes; Optuna would only tune on noise |
+| Feast, Great Expectations | **Not used** (SQLite store + built-in quality gate instead) |
+
+### Load failure found and fixed
+First 50-user run on Kubernetes (unbounded concurrency): all pods OOM-killed, 13,534 of 13,535 requests failed. Fixes, each covered by a test: per-process concurrency limit with load shedding (503 + Retry-After), `/health` on the event loop, heap trimming after each request (memory growth ~12 -> ~3 MiB/request), graceful self-recycle above an RSS threshold. A second bug found while testing the worker: its image lacked MLflow, so retraining would have crashed in Docker (fixed with a separate worker image stage).
+
+### Final measurements
+- **50 users, 300 s, HPA (CPU 70 %, 2-5 pods):** replicas 2 -> 4 after 50 s, -> 5 after 170 s. 778 requests: 238 served (median 21.7 s, p95 23.8 s, 0.79 clips/s), 515 shed (503), 25 connection errors; 0 OOM kills; 2 graceful recycles.
+- **Rolling update x2 (2 replicas, continuous traffic):** 0/764 failed health probes, 0/20 failed predictions, 8.1 s.
+- **Pod force-delete x2:** 0/611 failed health probes, 1/15 failed predictions (in-flight on the killed pod), 4.0-4.6 s to 2 ready replicas.
+- **TFLite (laptop CPU, P-core / E-core):** FP32 1.2 / 9.8 us; INT8 dynamic 1.2 / 7.5 us; full-int 1.2 / 7.0 us; pruned+INT8 1.2 / 7.7 us. Agreement with FP32: 100 / 100 / 99.85 / 99.6 %.
+- **Retrain loop in Docker:** 3 new recordings triggered a retrain, the gate refused the challenger (p = 0.29) and the alert reached the webhook.
+- **Tests:** 45 pass (~13 s).
+
+Caveats: Prometheus counters for retraining reset when the worker container is replaced; the Grafana screenshot is from the Docker Compose stack, not from Kubernetes; the 25 connection errors occurred while pods were recycling or restarting under overload and were not studied further.

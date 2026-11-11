@@ -136,12 +136,33 @@ def run_monitor(p) -> dict:
     return rep
 
 
-def loop(p, interval_s=300):
-    print(f"monitor/retrain loop every {interval_s}s", flush=True)
+def loop(p, interval_s=300, metrics_port=9101):
+    from prometheus_client import Counter, Gauge, start_http_server
+    from .alerts import notify
+    g_alarm = Gauge("sprintml_drift_alarm", "1 if an ARMED drift alarm is active")
+    g_armed = Gauge("sprintml_drift_armed", "1 if the drift monitor is armed (reference/window large enough)")
+    g_p = Gauge("sprintml_drift_min_p_value", "Smallest per-feature KS p-value in the current window")
+    g_win = Gauge("sprintml_drift_window_size", "Requests in the monitoring window")
+    g_ref = Gauge("sprintml_drift_reference_size", "Reference recordings")
+    g_new = Gauge("sprintml_new_recordings_pending", "Quality-passed recordings since the last retrain")
+    c_rt = Counter("sprintml_retrain_total", "Retraining runs", ["outcome"])
+    start_http_server(metrics_port)
+    print(f"monitor/retrain loop every {interval_s}s; metrics on :{metrics_port}", flush=True)
     while True:
         try:
             rep = run_monitor(p)
+            if "features" in rep and rep["features"]:
+                g_alarm.set(int(rep["alarm"])); g_armed.set(int(rep["armed"]))
+                g_p.set(min(f["p_value"] for f in rep["features"]))
+                g_win.set(rep["n_window"]); g_ref.set(rep["n_reference"])
+                if rep["alarm"]:
+                    notify(f"Drift ALARM on {', '.join(rep['drifted_features'])} (window n={rep['n_window']})")
             d = maybe_retrain(p)
+            g_new.set(d.get("pending_new_recordings", 0))
+            if d.get("triggered"):
+                outcome = "promoted" if d.get("promote") else ("refused" if d.get("trained") else "skipped")
+                c_rt.labels(outcome).inc()
+                notify(f"Retraining ({d.get('reason')}): {outcome}. {'; '.join(d.get('reasons') or [])}")
             print(time.strftime("%H:%M:%S"), "drift:", rep.get("status"), "| retrain:", d.get("triggered"),
                   d.get("reasons", ""), flush=True)
         except Exception as e:  # keep the worker alive

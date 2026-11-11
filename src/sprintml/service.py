@@ -7,7 +7,11 @@ GET  /drift     current drift report (monitor)
 GET  /model     champion metadata
 POST /admin/reload   re-read the champion (it is also hot-reloaded when promoted)
 """
+import ctypes
+import gc
 import json
+import os
+import signal
 import tempfile
 import threading
 import time
@@ -20,7 +24,7 @@ import numpy as np
 import pandas as pd
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, Response
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter, Gauge, Histogram, generate_latest, multiprocess
 
 from . import __version__
 from .config import CLASS_NAMES, art_dir, load_params
@@ -37,8 +41,14 @@ P = load_params()
 STAGE = Histogram("sprintml_stage_seconds", "Latency per pipeline stage", ["stage"],
                   buckets=(.01, .05, .1, .25, .5, 1, 2, 3, 5, 10, 20))
 REQS = Counter("sprintml_requests_total", "Prediction requests", ["status"])
-MODEL_V = Gauge("sprintml_model_version", "Loaded champion version")
-INFLIGHT = Gauge("sprintml_inflight_requests", "Requests being processed")
+MODEL_V = Gauge("sprintml_model_version", "Loaded champion version", multiprocess_mode="max")
+INFLIGHT = Gauge("sprintml_inflight_requests", "Requests being processed", multiprocess_mode="livesum")
+MAX_CONCURRENT = int(os.environ.get("MAX_CONCURRENT", 2))     # simultaneous pose pipelines per process (memory bound)
+QUEUE_TIMEOUT = float(os.environ.get("QUEUE_TIMEOUT_S", 20))  # how long a request may wait for a slot before being shed
+_slots = threading.BoundedSemaphore(MAX_CONCURRENT)
+RECYCLE_RSS_MB = float(os.environ.get("RECYCLE_RSS_MB", 0))   # >0: gracefully restart the process above this RSS
+_draining = threading.Event()
+_active = 0
 _lock = threading.Lock()
 _state = {"bundle": None, "meta": None, "mtime": None}
 _store = None
@@ -79,6 +89,35 @@ def _startup():
     load_champion()
 
 
+def _rss_mb() -> float:
+    try:
+        return int(open("/proc/self/statm").read().split()[1]) * os.sysconf("SC_PAGE_SIZE") / 2 ** 20
+    except OSError:
+        return 0.0
+
+
+def _exit_when_idle():
+    while _active > 0:
+        time.sleep(0.2)
+    os.kill(os.getpid(), signal.SIGTERM)      # uvicorn drains and exits; the supervisor / orchestrator restarts it
+
+
+def _maybe_recycle():
+    """Memory safety net: above RECYCLE_RSS_MB stop taking traffic (health -> 503), finish in-flight work, exit."""
+    if RECYCLE_RSS_MB and not _draining.is_set() and _rss_mb() > RECYCLE_RSS_MB:
+        _draining.set()
+        threading.Thread(target=_exit_when_idle, daemon=True).start()
+
+
+def _release_memory():
+    """Return freed memory to the OS: MediaPipe/OpenCV buffers otherwise fragment the glibc heap (~12 MiB/request)."""
+    gc.collect()
+    try:
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except OSError:       # not glibc (e.g. macOS dev run)
+        pass
+
+
 @contextmanager
 def timed(stage, bucket):
     t = time.perf_counter()
@@ -99,10 +138,10 @@ def _save(upload: UploadFile, td: Path, name: str) -> Path:
 
 
 @app.get("/health")
-def health():
+async def health():       # async: served on the event loop, so it stays responsive when the worker threads are busy
     _maybe_reload()
-    ok = _state["bundle"] is not None
-    body = {"status": "ok" if ok else "no_model", "model_version": (_state["meta"] or {}).get("version"),
+    ok = _state["bundle"] is not None and not _draining.is_set()
+    body = {"status": "ok" if ok else ("draining" if _draining.is_set() else "no_model"), "model_version": (_state["meta"] or {}).get("version"),
             "model_validated": (_state["meta"] or {}).get("validated"), "service_version": __version__}
     return JSONResponse(body, status_code=200 if ok else 503)
 
@@ -133,6 +172,10 @@ def reload_model():
 
 @app.get("/metrics")
 def metrics():
+    if os.environ.get("PROMETHEUS_MULTIPROC_DIR"):      # aggregate across uvicorn worker processes
+        reg = CollectorRegistry()
+        multiprocess.MultiProcessCollector(reg)
+        return Response(generate_latest(reg), media_type=CONTENT_TYPE_LATEST)
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
@@ -158,6 +201,16 @@ def predict(video: UploadFile = File(...), accel: UploadFile = File(...), gyro: 
         raise HTTPException(503, "no model loaded")
     rid = recording_id or f"req-{uuid.uuid4().hex[:10]}"
     timings, t_all = {}, time.perf_counter()
+    if not _slots.acquire(timeout=QUEUE_TIMEOUT):          # load shedding instead of exhausting memory
+        REQS.labels("shed").inc()
+        raise HTTPException(503, "server busy, retry shortly", headers={"Retry-After": "5"})
+    if _draining.is_set():                                   # recycling: let the load balancer retry elsewhere
+        _slots.release()
+        REQS.labels("shed").inc()
+        raise HTTPException(503, "instance restarting, retry", headers={"Retry-After": "2"})
+    global _active
+    with _lock:
+        _active += 1
     INFLIGHT.inc()
     try:
         with tempfile.TemporaryDirectory() as td:
@@ -203,3 +256,8 @@ def predict(video: UploadFile = File(...), accel: UploadFile = File(...), gyro: 
                 "quality": q, "timings_ms": timings}
     finally:
         INFLIGHT.dec()
+        _release_memory()
+        with _lock:
+            _active -= 1
+        _maybe_recycle()
+        _slots.release()

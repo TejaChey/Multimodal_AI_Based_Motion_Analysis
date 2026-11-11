@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: sprintml-api}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: sprintml-api}}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 1, maxUnavailable: 0}     # zero-downtime updates
+  template:
+    metadata:
+      labels: {app: sprintml-api}
+      annotations: {prometheus.io/scrape: "true", prometheus.io/port: "8000"}
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: api
+          image: sprintml-api:latest
+          imagePullPolicy: IfNotPresent
+          ports: [{containerPort: 8000}]
+          env: [{name: WORKERS, value: "1"}, {name: MAX_CONCURRENT, value: "1"}, {name: RECYCLE_RSS_MB, value: "1200"}, {name: SPRINTML_ARTIFACTS, value: /data}]   # one pose pipeline (~0.6 GiB) per pod
+          resources: {requests: {cpu: "1", memory: 768Mi}, limits: {cpu: "2", memory: 2Gi}}
+          readinessProbe: {httpGet: {path: /health, port: 8000}, periodSeconds: 3, failureThreshold: 1}
+          livenessProbe: {httpGet: {path: /health, port: 8000}, initialDelaySeconds: 20, periodSeconds: 10, failureThreshold: 3}
+          lifecycle: {preStop: {exec: {command: ["sleep", "5"]}}}   # let the endpoint drain before SIGTERM
+          volumeMounts: [{name: art, mountPath: /data}]
+      volumes: [{name: art, hostPath: {path: /data, type: Directory}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: sprintml-api}
+spec:
+  type: NodePort
+  selector: {app: sprintml-api}
+  ports: [{port: 8000, targetPort: 8000, nodePort: 30080}]
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: {name: sprintml-api}
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: sprintml-api}
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource: {name: cpu, target: {type: Utilization, averageUtilization: 70}}
+  behavior:
+    scaleUp: {stabilizationWindowSeconds: 0, policies: [{type: Pods, value: 2, periodSeconds: 15}]}
+    scaleDown: {stabilizationWindowSeconds: 120}

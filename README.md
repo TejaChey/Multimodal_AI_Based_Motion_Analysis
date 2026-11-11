@@ -161,14 +161,15 @@ FastAPI /predict ◀── loads artifacts/champion ◀── promoted only if s
 | Reproducible pipeline + data versioning | `dvc.yaml`, `dvc.lock`, `params.yaml` |
 | Experiment tracking + model registry (`champion` / `challenger` aliases) | MLflow (`artifacts/mlflow.db`) |
 | Serving | `Dockerfile`, `docker-compose.yml` (API + drift/retrain worker) |
-| Tests (43) | `tests/`  ·  CI: `.github/workflows/ci.yml` |
+| Monitoring, Kubernetes, compression | `deploy/` (Prometheus, Grafana, kind manifests), `scripts/tflite_compression.py`, `scripts/k8s_fault_tests.py` |
+| Tests (45) | `tests/`  ·  CI: `.github/workflows/ci.yml` |
 | Load, recovery, uptime, drift-replay | `scripts/` |
 
 ```bash
 python3.11 -m venv .venv && .venv/bin/pip install -r requirements-ci.txt dvc locust
 export PYTHONPATH=src PATH="$PWD/.venv/bin:$PATH"
 dvc repro                       # pose -> features -> validate -> train (registers + gates the model)
-pytest                          # 43 tests (~10 s)
+pytest                          # 45 tests (~13 s)
 docker compose up --build       # API on :8000 + monitor/retrain worker
 streamlit run App/app.py        # thin client (SPRINTML_API_URL=http://localhost:8000)
 python -m sprintml.cli replay   # chronological retraining replay through the real loop

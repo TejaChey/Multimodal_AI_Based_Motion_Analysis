@@ -62,3 +62,4 @@ mlruns/
 /artifacts/
 .dvc/cache
 .dvc/tmp
+/artifacts_k8s/
