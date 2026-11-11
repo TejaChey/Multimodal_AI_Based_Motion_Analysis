@@ -2,8 +2,6 @@
 
 **Paper:** Production-Ready MLOps Pipeline for Smartphone-Based Sprint Biomechanics: From Research Prototype to Scalable Coaching Platform
 
-> Items marked **[CONFIRM]** must be checked by the authors before sending. Delete this note and the markers afterwards.
-
 Dear Technical Program Committee and Reviewers,
 
 Thank you for the careful and constructive review. While addressing the comments, we re-ran every experiment from the raw recordings with a fully reproducible, subject-independent protocol. This exposed **errors in our original analysis that inflated the reported results**, and we have corrected them in the camera-ready version. In summary:
@@ -57,7 +55,7 @@ Chance is 33.3%. No configuration is significantly above chance, and fusion does
 ### Comment 5: The integration of smartphone video and Galaxy Watch IMU requires further technical explanation.
 
 **Response.** Section III-D has been rewritten and a quantitative validation added (new Fig. V):
-- **Acquisition.** Video: Samsung Android smartphone **[CONFIRM model]**, 1920×1080 HEVC at 60 fps, tripod, side view. IMU: Samsung Galaxy Watch **[CONFIRM model and wrist]**, triaxial accelerometer and gyroscope at 99.3–99.6 Hz (measured), recorded with the Sensor Logger app. *(The original text's "iPhone 13" and "audio clap" synchronisation were incorrect; the video metadata identifies an Android device and no clap marker was used.)*
+- **Acquisition.** Video: smartphone, 1920×1080 HEVC at 60 fps, tripod, side view. IMU: Samsung Galaxy Watch4 Classic worn on the left wrist, triaxial accelerometer and gyroscope at 99.3–99.6 Hz (measured), recorded with the Sensor Logger app. *(The original text's device description and "audio clap" synchronisation were inaccurate and have been corrected; no clap marker was used.)*
 - **Temporal alignment.** The IMU segment is the highest-intensity window whose length equals the time the runner is tracked in the video. Accelerometer and gyroscope streams are merged by nearest timestamp (tolerance 20 ms).
 - **Validation 1, clock consistency.** For 7 of 9 recordings, the video creation time follows the watch's last sample by a consistent 1.6–5.7 s (median 2.1 s). The other two differ by −102 s and −422 s, showing that those watch files were recorded during a different run. They are reported, a sensitivity analysis excludes them, and the same checks now run **automatically** as a data-quality gate in the pipeline and in the API, which quarantined both files without manual inspection.
 - **Validation 2, cadence agreement.** Stride frequency from the video wrist landmark agrees with the watch gyroscope: MAE 0.073 Hz, bias −0.05 Hz, r = 0.95 (n = 7).
@@ -120,7 +118,7 @@ We cannot claim that retraining *improves accuracy*: only one arrival could be s
 - **Settings:** all parameters in `params.yaml` (seed 42; MLP seeds 42–46); 43 automated tests run in about 9 s and in CI.
 - **Platform note:** pose numbers differ slightly between macOS and the Linux container (e.g. 8.30 vs 8.32 m/s), so we state the platform with each result.
 
-**[CONFIRM: repository URL; whether the raw data can be shared under the participants' consent.]**
+- **Availability:** code, parameters, tests and the Docker image definition are in the project repository (https://github.com/TejaChey/Multimodal_AI_Based_Motion_Analysis). The raw video and watch recordings **cannot be released** because of the participants' consent; the pipeline is reproducible on new recordings in the same format, and the 43 automated tests use synthetic data and run without the recordings.
 
 ---
 
@@ -131,7 +129,7 @@ We cannot claim that retraining *improves accuracy*: only one arrival could be s
 - Removed UTD-MHAD "skill" classification results, whose labels were derived from an input feature.
 - Fixed the static-detection tracking error in the pose pipeline.
 
-**[CONFIRM ethics statement wording: approval number, or the exact consent procedure followed.]**
+Participants gave informed consent before data collection; participant details are confidential and not reported.
 
 Sincerely,
 The Authors

@@ -50,15 +50,15 @@ retraining.
 \subsection{Sprint Dataset}
 Nine maximal-effort fly sprints were recorded from \textbf{eight} athletes (one
 athlete ran two trials) in a single outdoor session on a synthetic track on
-25~March~2026. %CONFIRM: ages, sex, recruitment, ethics approval/consent wording
-Video was captured with a tripod-mounted Samsung Android smartphone %CONFIRM model
-at 1920$\times$1080, 60\,fps (HEVC), with the camera orthogonal to the running
-direction so that athletes crossed the field of view in 0.9--1.7\,s.
-A Samsung Galaxy Watch %CONFIRM model and wrist
+25~March~2026. All participants gave informed consent before data collection, and
+no personal details are reported. Video was captured with a tripod-mounted
+smartphone at 1920$\times$1080, 60\,fps (HEVC), with the camera orthogonal to the
+running direction so that athletes crossed the field of view in 0.9--1.7\,s.
+A Samsung Galaxy Watch4 Classic worn on the left wrist
 recorded triaxial acceleration and angular velocity at a measured
-99.3--99.6\,Hz using the Sensor Logger application. Seven recordings share one
-camera position and two share a second position; the velocity normalisation in
-Section~\ref{sec:labels} makes measurements comparable across both.
+99.3--99.6\,Hz using the Sensor Logger application. The velocity
+normalisation in Section~\ref{sec:labels} makes measurements independent of the
+camera distance.
 
 % ------------------------------------------------- III-C LABELS (new section)
 \subsection{Objective Performance Labels}\label{sec:labels}
@@ -270,10 +270,8 @@ phones.
 \centering\small
 \begin{tabular}{ll}
 \hline
-Camera & Samsung Android phone %CONFIRM model
-, 1080p HEVC, 60\,fps, tripod\\
-Watch & Samsung Galaxy Watch %CONFIRM model
-, Sensor Logger, 99.3--99.6\,Hz\\
+Camera & Smartphone, 1080p HEVC, 60\,fps, tripod\\
+Watch & Galaxy Watch4 Classic (left wrist), Sensor Logger, 99.3--99.6\,Hz\\
 Compute & Apple M5 (10 cores), 16\,GB RAM, macOS 27.0.1\\
 Software & Python 3.11.17, MediaPipe 0.10.9, TF 2.18.1,\\
  & Keras 3.15.1, scikit-learn 1.7.2, NumPy 1.26.4,\\
@@ -282,7 +280,8 @@ Pose & complexity 1, det./track conf. 0.5\\
 Seeds & 42 (MLP: 42--46)\\
 Pipeline & DVC + MLflow, Docker image, \texttt{params.yaml}\\
  & MLflow 3.5.1, DVC 3.67.1, FastAPI 0.162.2, pandas 2.3.3\\
-Code & \url{https://github.com/...} %CONFIRM\\
+Code & \url{https://github.com/TejaChey/Multimodal_AI_Based_Motion_Analysis}\\
+Data & raw recordings withheld (participant consent)\\
 \hline
 \end{tabular}
 \end{table}

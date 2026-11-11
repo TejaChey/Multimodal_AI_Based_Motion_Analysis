@@ -6,7 +6,7 @@ Everything here was produced from the **existing** 9 recordings. No new data was
 
 | File | Use |
 |---|---|
-| `RESPONSE_TO_REVIEWERS.md` | Point-by-point reply to the 10 comments. Fill in the `[CONFIRM]` items before sending. |
+| `RESPONSE_TO_REVIEWERS.md` | Point-by-point reply to the 10 comments. No `[CONFIRM]` items remain. |
 | `revised_sections.tex` | Drop-in LaTeX for the abstract, contributions, methods, results, latency, drift, limitations, reproducibility and conclusion |
 | `figures/` | New figures: speed labels, sync validation, confusion matrices, drift power |
 | `MLOPS_RESULTS.md` | What the MLOps system does, with every measured number (load, faults, drift replay, retraining replay) |
@@ -39,12 +39,13 @@ Everything here was produced from the **existing** 9 recordings. No new data was
 
 ## Still to do (authors)
 
-- [ ] Confirm: phone model (metadata shows Samsung Android, **not** iPhone 13), watch model, which wrist, participant ages/sex, and **ethics approval / consent wording**.
+- [x] Watch = Galaxy Watch4 Classic, left wrist; consent taken; participant details kept confidential (done). Do **not** claim ethics-committee approval or *signed* forms unless that is true.
 - [ ] Fix citation numbering. Most in-text numbers point to the wrong references; check that each reference exists.
 - [ ] Delete the garbled paragraph in §V-B ("ESM-COTS … CMA project"), the empty §II-D, and the "Tap to enter" overlay in Fig. 2. Replace Fig. 3 (it shows "96.67%" and the K-Means autograder) and Fig. 6 (100% on leaked data).
 - [ ] Optional: ask the TPC whether a small title change is allowed, e.g. "An MLOps Pipeline for Smartphone-Based Sprint Biomechanics: From Research Prototype Toward a Coaching Platform". "Production-ready" and "scalable" are not demonstrated.
 - [ ] Optional: a teammate runs `python code/06_latency.py <device-name>` on their laptop to add a second device column to the latency table.
-- [ ] Add the repository URL.
+- [x] Repository URL added; raw data stated as not releasable (consent).
+- [ ] **Push/merge the `mlops-camera-ready` branch to that repository** so the MLOps code the paper cites is actually there.
 
 ## Reproduce
 
@@ -59,4 +60,4 @@ bash paper_revision/code/run_all.sh
 The MLOps system now exists in `src/sprintml/` (DVC pipeline, MLflow registry with a promotion gate, FastAPI + Docker,
 drift monitor, retraining loop, 43 tests, CI workflow). Measured evidence: `MLOPS_RESULTS.md`. Run `dvc repro`, `pytest`,
 `docker compose up --build` from the repository root. The reviewer response and `revised_sections.tex` are updated
-to match. Still open: on-phone latency, running the CI on GitHub, a longer uptime probe, and the `[CONFIRM]` items.
+to match. Still open: on-phone latency, running the CI on GitHub, a longer uptime probe, and the repository URL.
